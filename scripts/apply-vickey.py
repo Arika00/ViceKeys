@@ -131,7 +131,7 @@ def patch(root: Path) -> None:
         "    const double sensitivity = root.value(\"sensitivity\").toDouble();\n"
         "    const double aimSensitivity = root.value(\"aimSensitivity\").toDouble();\n"
         "    const int overlayKey = root.value(\"overlayKey\").toInt();\n"
-        "    if (sensitivity < 0.10 || sensitivity > 10.0 || aimSensitivity < 0.10 || aimSensitivity > 3.0 || overlayKey <= 0) return false;\n"
+        "    if (sensitivity < 0.01 || sensitivity > 100.0 || aimSensitivity < 0.01 || aimSensitivity > 100.0 || overlayKey <= 0) return false;\n"
         "    QMap<int, int> keysToImport; const QJsonObject keys = root.value(\"keymap\").toObject();\n"
         "    for (auto it = keys.begin(); it != keys.end(); ++it) { bool ok = false; int key = it.key().toInt(&ok); if (!ok || key <= 0 || !it.value().isDouble()) return false; int value = it.value().toInt(-1); if (value < 0 || value > 0x7fffffff) return false; keysToImport.insert(key, value); }\n"
         "    QMap<int, int> mouseToImport; const QJsonObject mouse = root.value(\"mousemap\").toObject();\n"
