@@ -150,6 +150,7 @@ def patch(root: Path) -> None:
         "\t\tdouble vice_key_sensitivity = 1.0;\n"
         "\t\tdouble vice_key_aim_sensitivity = 0.7;\n"
         "\t\tbool vice_key_mouse_aiming = false;\n"
+        "\t\tbool vice_key_mouse_initialized = false;\n"
         "\t\tqint64 vice_key_mouse_delta_x = 0;\n"
         "\t\tqint64 vice_key_mouse_delta_y = 0;\n"
         "\t\tQTimer *vice_key_mouse_reset_timer = nullptr;\n",
@@ -326,8 +327,8 @@ public:
         "\t\tvice_key_mouse_delta_y = 0;\n"
         "\t\tconst double aim = vice_key_mouse_aiming ? vice_key_aim_sensitivity : 1.0;\n"
         "\t\tconst double gain = vice_key_sensitivity * aim * 2200.0;\n"
-        "\t\tconst int16_t nextX = static_cast<int16_t>(qBound<qint64>(-32767, qRound64(static_cast<double>(dx) * gain), 32767));\n"
-        "\t\tconst int16_t nextY = static_cast<int16_t>(qBound<qint64>(-32767, qRound64(static_cast<double>(dy) * gain), 32767));\n"
+        "\t\tconst int16_t nextX = static_cast<int16_t>(qBound<qint64>(qint64(-32767), qRound64(static_cast<double>(dx) * gain), qint64(32767)));\n"
+        "\t\tconst int16_t nextY = static_cast<int16_t>(qBound<qint64>(qint64(-32767), qRound64(static_cast<double>(dy) * gain), qint64(32767)));\n"
         "\t\tif (keyboard_state.right_x != nextX || keyboard_state.right_y != nextY) {\n"
         "\t\t\tkeyboard_state.right_x = nextX;\n"
         "\t\t\tkeyboard_state.right_y = nextY;\n"
@@ -351,7 +352,7 @@ public:
         "\t\tif (QCoreApplication::instance()) QCoreApplication::instance()->installNativeEventFilter(rawInputFilter);\n"
         "\t}\n"
         "\tif (!rawInputFilter->attach(this)) qWarning() << \"ViceKey: Windows Raw Input registration failed\";\n"
-        "\tQObject::connect(this, &QObject::destroyed, [rawInputFilter] { if (rawInputFilter) rawInputFilter->detach(); });\n"
+        "\tQObject::connect(this, &QObject::destroyed, [] { if (rawInputFilter) rawInputFilter->detach(); });\n"
         "#endif\n"
         "\tvice_key_mouse_reset_timer->start();\n",
         "mouse look timer")

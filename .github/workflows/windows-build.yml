@@ -41,8 +41,8 @@ jobs:
       - name: Publish Windows ZIP to GitHub Releases
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: v0.1.0-preview.3
-          name: ViceKey 0.1.0 Preview 3 — Windows
+          tag_name: v0.1.0-preview.4
+          name: ViceKey 0.1.0 Preview 4 — Windows
           target_commitish: ${{ github.sha }}
           draft: false
           prerelease: true
