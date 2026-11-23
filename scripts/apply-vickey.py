@@ -480,7 +480,9 @@ static ViceKeyRawInputFilter *g_viceKeyRawInputFilter = nullptr;
         "\t}\n"
         "}\n"
     )
-    replace_once(stream_cpp, old_mouse, new_mouse, "mouse-to-right-stick input")    old_keyboard = (
+    replace_once(stream_cpp, old_mouse, new_mouse, "mouse-to-right-stick input")
+
+    old_keyboard = (
         "void StreamSession::HandleKeyboardEvent(QKeyEvent *event)\n{\n"
         "\tif(!keyboard_controller_enabled)\n"
         "\t\treturn;\n"
