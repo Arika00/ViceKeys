@@ -1,0 +1,8 @@
+ViceKey is a modified build of Chiaki-ng v1.10.1.
+
+Chiaki-ng is licensed under AGPL-3.0 with an OpenSSL exception. The upstream LICENSE file, copyright notices, and complete corresponding source are obtained by build-vickey.sh when it clones the upstream repository. Any redistribution of the patched executable must comply with the upstream license, including making the corresponding modified source available under the applicable terms.
+
+Upstream: https://github.com/chiaki-ng/chiaki-ng
+ViceKey patch: scripts/apply-vickey.py
+
+ViceKey is unofficial and is not affiliated with Sony Interactive Entertainment or Rockstar Games.
