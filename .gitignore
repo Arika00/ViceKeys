@@ -1,0 +1,22 @@
+# Build output
+/build/
+/out/
+/dist/
+*.exe
+*.dll
+*.pdb
+*.obj
+*.o
+*.a
+*.lib
+
+# Local tooling and machine-specific files
+.env
+.env.*
+*.local
+*.user
+*.suo
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
