@@ -54,9 +54,9 @@ def patch(root: Path) -> None:
         "\nQString Settings::GetViceKeyLayout() const\n{\n\treturn settings.value(\"vickey/layout\", \"AZERTY\").toString();\n}\n"
         "void Settings::SetViceKeyLayout(const QString &layout)\n{\n\tconst QString normalized = layout.compare(\"QWERTY\", Qt::CaseInsensitive) == 0 ? \"QWERTY\" : \"AZERTY\";\n\tsettings.setValue(\"vickey/layout\", normalized);\n}\n"
         "double Settings::GetViceKeySensitivity() const\n{\n\treturn settings.value(\"vickey/sensitivity\", 1.0).toDouble();\n}\n"
-        "void Settings::SetViceKeySensitivity(double value)\n{\n\tsettings.setValue(\"vickey/sensitivity\", qBound(0.10, value, 10.0));\n}\n"
+        "void Settings::SetViceKeySensitivity(double value)\n{\n\tsettings.setValue(\"vickey/sensitivity\", qBound(0.01, value, 100.0));\n}\n"
         "double Settings::GetViceKeyAimSensitivity() const\n{\n\treturn settings.value(\"vickey/aim_sensitivity\", 0.7).toDouble();\n}\n"
-        "void Settings::SetViceKeyAimSensitivity(double value)\n{\n\tsettings.setValue(\"vickey/aim_sensitivity\", qBound(0.10, value, 3.0));\n}\n",
+        "void Settings::SetViceKeyAimSensitivity(double value)\n{\n\tsettings.setValue(\"vickey/aim_sensitivity\", qBound(0.01, value, 100.0));\n}\n",
         "settings implementation")
 
     insert_after(qmlsettings_h,
@@ -150,9 +150,133 @@ def patch(root: Path) -> None:
         "\t\tdouble vice_key_sensitivity = 1.0;\n"
         "\t\tdouble vice_key_aim_sensitivity = 0.7;\n"
         "\t\tbool vice_key_mouse_aiming = false;\n"
-        "\t\tbool vice_key_mouse_initialized = false;\n"
+        "\t\tqint64 vice_key_mouse_delta_x = 0;\n"
+        "\t\tqint64 vice_key_mouse_delta_y = 0;\n"
         "\t\tQTimer *vice_key_mouse_reset_timer = nullptr;\n",
         "stream session members")
+
+    # Windows Raw Input: read hardware-relative deltas without cursor warping.
+    insert_after(stream_cpp,
+        "#include <QKeyEvent>\n",
+        """#include <QAbstractNativeEventFilter>
+#include <QCoreApplication>
+#include <QDebug>
+#include <QPointer>
+#include <vector>
+#ifdef Q_OS_WIN
+#ifndef NOMINMAX
+#define NOMINMAX
+#endif
+#include <windows.h>
+
+class ViceKeyRawInputFilter final : public QAbstractNativeEventFilter
+{
+    QPointer<StreamSession> m_session;
+    HWND m_target = nullptr;
+    bool m_registered = false;
+
+    void updateClip()
+    {
+        if (!m_target || !IsWindow(m_target) || IsIconic(m_target)) {
+            ClipCursor(nullptr);
+            return;
+        }
+        RECT client{};
+        if (!GetClientRect(m_target, &client)) return;
+        POINT topLeft{client.left, client.top};
+        POINT bottomRight{client.right, client.bottom};
+        if (!ClientToScreen(m_target, &topLeft) || !ClientToScreen(m_target, &bottomRight)) return;
+        RECT screenRect{topLeft.x, topLeft.y, bottomRight.x, bottomRight.y};
+        ClipCursor(&screenRect);
+    }
+
+public:
+    bool attach(StreamSession *session)
+    {
+        detach();
+        m_session = session;
+        m_target = GetForegroundWindow();
+        if (!m_target) {
+            m_session.clear();
+            return false;
+        }
+        RAWINPUTDEVICE device{};
+        device.usUsagePage = 0x01;
+        device.usUsage = 0x02;
+        device.dwFlags = RIDEV_INPUTSINK;
+        device.hwndTarget = m_target;
+        if (!RegisterRawInputDevices(&device, 1, sizeof(device))) {
+            m_target = nullptr;
+            m_session.clear();
+            return false;
+        }
+        m_registered = true;
+        updateClip();
+        return true;
+    }
+
+    void detach()
+    {
+        ClipCursor(nullptr);
+        if (m_registered) {
+            RAWINPUTDEVICE device{};
+            device.usUsagePage = 0x01;
+            device.usUsage = 0x02;
+            device.dwFlags = RIDEV_REMOVE;
+            device.hwndTarget = nullptr;
+            RegisterRawInputDevices(&device, 1, sizeof(device));
+        }
+        m_registered = false;
+        m_target = nullptr;
+        m_session.clear();
+    }
+
+    bool nativeEventFilter(const QByteArray &, void *message, qintptr *result) override
+    {
+        auto *msg = static_cast<MSG *>(message);
+        if (!msg) return false;
+
+        if (msg->hwnd == m_target && msg->message == WM_ACTIVATEAPP) {
+            if (msg->wParam) updateClip();
+            else {
+                ClipCursor(nullptr);
+                if (m_session) m_session->ResetRawMouseInput();
+            }
+            return false;
+        }
+        if (msg->hwnd == m_target && (msg->message == WM_SIZE || msg->message == WM_MOVE)) {
+            updateClip();
+            return false;
+        }
+        if (msg->message != WM_INPUT || msg->hwnd != m_target) return false;
+
+        if (m_session && GetForegroundWindow() == m_target) {
+            const HRAWINPUT input = reinterpret_cast<HRAWINPUT>(msg->lParam);
+            UINT size = 0;
+            if (GetRawInputData(input, RID_INPUT, nullptr, &size, sizeof(RAWINPUTHEADER)) == 0 &&
+                size >= sizeof(RAWINPUTHEADER)) {
+                std::vector<BYTE> bytes(size);
+                if (GetRawInputData(input, RID_INPUT, bytes.data(), &size, sizeof(RAWINPUTHEADER)) == size) {
+                    const auto *raw = reinterpret_cast<const RAWINPUT *>(bytes.data());
+                    if (raw->header.dwType == RIM_TYPEMOUSE &&
+                        !(raw->data.mouse.usFlags & MOUSE_MOVE_ABSOLUTE)) {
+                        const LONG dx = raw->data.mouse.lLastX;
+                        const LONG dy = raw->data.mouse.lLastY;
+                        if (dx || dy) m_session->HandleRawMouseDelta(static_cast<int>(dx), static_cast<int>(dy));
+                    }
+                }
+            }
+        }
+
+        if (msg->wParam == RIM_INPUT)
+            DefWindowProcW(msg->hwnd, msg->message, msg->wParam, msg->lParam);
+        if (result) *result = 0;
+        return true;
+    }
+};
+#endif
+""",
+        "Windows Raw Input support")
 
     # Add default GTA VI keyboard bindings after reading Chiaki's saved mapping.
     mapping = "\tkey_map = settings->GetControllerMappingForDecoding();\n"
@@ -192,6 +316,25 @@ def patch(root: Path) -> None:
         "\t\tvice_key_aim_sensitivity = connect_info.settings->GetViceKeyAimSensitivity();\n"
         "\t}\n"
         "\tvice_key_mouse_reset_timer = new QTimer(this);\n"
+        "#ifdef Q_OS_WIN\n"
+        "\tvice_key_mouse_reset_timer->setTimerType(Qt::PreciseTimer);\n"
+        "\tvice_key_mouse_reset_timer->setInterval(4);\n"
+        "\tconnect(vice_key_mouse_reset_timer, &QTimer::timeout, this, [this] {\n"
+        "\t\tconst qint64 dx = vice_key_mouse_delta_x;\n"
+        "\t\tconst qint64 dy = vice_key_mouse_delta_y;\n"
+        "\t\tvice_key_mouse_delta_x = 0;\n"
+        "\t\tvice_key_mouse_delta_y = 0;\n"
+        "\t\tconst double aim = vice_key_mouse_aiming ? vice_key_aim_sensitivity : 1.0;\n"
+        "\t\tconst double gain = vice_key_sensitivity * aim * 2200.0;\n"
+        "\t\tconst int16_t nextX = static_cast<int16_t>(qBound<qint64>(-32767, qRound64(static_cast<double>(dx) * gain), 32767));\n"
+        "\t\tconst int16_t nextY = static_cast<int16_t>(qBound<qint64>(-32767, qRound64(static_cast<double>(dy) * gain), 32767));\n"
+        "\t\tif (keyboard_state.right_x != nextX || keyboard_state.right_y != nextY) {\n"
+        "\t\t\tkeyboard_state.right_x = nextX;\n"
+        "\t\t\tkeyboard_state.right_y = nextY;\n"
+        "\t\t\tSendFeedbackState();\n"
+        "\t\t}\n"
+        "\t});\n"
+        "#else\n"
         "\tvice_key_mouse_reset_timer->setSingleShot(true);\n"
         "\tconnect(vice_key_mouse_reset_timer, &QTimer::timeout, this, [this] {\n"
         "\t\tif (keyboard_state.right_x || keyboard_state.right_y) {\n"
@@ -199,7 +342,18 @@ def patch(root: Path) -> None:
         "\t\t\tkeyboard_state.right_y = 0;\n"
         "\t\t\tSendFeedbackState();\n"
         "\t\t}\n"
-        "\t});\n",
+        "\t});\n"
+        "#endif\n"
+        "#ifdef Q_OS_WIN\n"
+        "\tstatic ViceKeyRawInputFilter *rawInputFilter = nullptr;\n"
+        "\tif (!rawInputFilter) {\n"
+        "\t\trawInputFilter = new ViceKeyRawInputFilter();\n"
+        "\t\tif (QCoreApplication::instance()) QCoreApplication::instance()->installNativeEventFilter(rawInputFilter);\n"
+        "\t}\n"
+        "\tif (!rawInputFilter->attach(this)) qWarning() << \"ViceKey: Windows Raw Input registration failed\";\n"
+        "\tQObject::connect(this, &QObject::destroyed, [rawInputFilter] { if (rawInputFilter) rawInputFilter->detach(); });\n"
+        "#endif\n"
+        "\tvice_key_mouse_reset_timer->start();\n",
         "mouse look timer")
 
     old_mouse = (
@@ -253,17 +407,35 @@ def patch(root: Path) -> None:
         "\t}\n"
         "\tSendFeedbackState();\n}\n\n"
         "void StreamSession::HandleMouseMoveEvent(QMouseEvent *event, qreal width, qreal height)\n{\n"
+        "#ifdef Q_OS_WIN\n"
+        "\tQ_UNUSED(event); Q_UNUSED(width); Q_UNUSED(height);\n"
+        "#else\n"
         "\tif (width <= 0 || height <= 0) return;\n"
-        "\tif (!vice_key_mouse_initialized) { vice_key_mouse_initialized = true; return; }\n"
         "\tconst QPointF center(width * 0.5, height * 0.5);\n"
         "\tconst QPointF delta = event->position() - center;\n"
         "\tif (qAbs(delta.x()) < 0.01 && qAbs(delta.y()) < 0.01) return;\n"
         "\tconst double aim = vice_key_mouse_aiming ? vice_key_aim_sensitivity : 1.0;\n"
-        "\tconst double gain = vice_key_sensitivity * aim * 1800.0;\n"
+        "\tconst double gain = vice_key_sensitivity * aim * 2200.0;\n"
         "\tkeyboard_state.right_x = static_cast<int16_t>(qBound(-32767, qRound(delta.x() * gain), 32767));\n"
         "\tkeyboard_state.right_y = static_cast<int16_t>(qBound(-32767, qRound(delta.y() * gain), 32767));\n"
         "\tif (vice_key_mouse_reset_timer) vice_key_mouse_reset_timer->start(12);\n"
-        "\tSendFeedbackState();\n}\n"
+        "\tSendFeedbackState();\n"
+        "#endif\n"
+        "}\n"
+        "\nvoid StreamSession::HandleRawMouseDelta(int dx, int dy)\n{\n"
+        "\tvice_key_mouse_delta_x = std::clamp<qint64>(vice_key_mouse_delta_x + dx, -1000000, 1000000);\n"
+        "\tvice_key_mouse_delta_y = std::clamp<qint64>(vice_key_mouse_delta_y + dy, -1000000, 1000000);\n"
+        "}\n"
+        "\nvoid StreamSession::ResetRawMouseInput()\n{\n"
+        "\tvice_key_mouse_delta_x = 0;\n"
+        "\tvice_key_mouse_delta_y = 0;\n"
+        "\tvice_key_mouse_aiming = false;\n"
+        "\tif (keyboard_state.right_x || keyboard_state.right_y) {\n"
+        "\t\tkeyboard_state.right_x = 0;\n"
+        "\t\tkeyboard_state.right_y = 0;\n"
+        "\t\tSendFeedbackState();\n"
+        "\t}\n"
+        "}\n"
     )
     replace_once(stream_cpp, old_mouse, new_mouse, "mouse-to-right-stick input")
 
@@ -287,7 +459,6 @@ def patch(root: Path) -> None:
         "                session->HandleMouseMoveEvent(static_cast<QMouseEvent*>(event), width(), height());\n"
         "                if (width() > 0 && height() > 0) {\n"
         "                    setCursor(Qt::BlankCursor);\n"
-        "                    QCursor::setPos(mapToGlobal(QPoint(width() / 2, height() / 2)));\n"
         "                }\n"
         "            } else if (event->type() == QEvent::MouseButtonPress)\n"
         "                session->HandleMousePressEvent(static_cast<QMouseEvent*>(event));\n"
@@ -321,14 +492,14 @@ def patch(root: Path) -> None:
         "                                Label { text: qsTr(\"Camera sensitivity: \" + Number(Chiaki.settings.viceKeySensitivity).toFixed(2)) }\n"
         "                                Slider {\n"
         "                                    Layout.fillWidth: true\n"
-        "                                    from: 0.10; to: 10.00; stepSize: 0.10\n"
+        "                                    from: 0.01; to: 100.00; stepSize: 0.05\n"
         "                                    value: Chiaki.settings.viceKeySensitivity\n"
         "                                    onMoved: { Chiaki.settings.viceKeySensitivity = value; if (Chiaki.session) Chiaki.session.setViceKeySensitivity(value); }\n"
         "                                }\n"
         "                                Label { text: qsTr(\"Aim sensitivity: \" + Number(Chiaki.settings.viceKeyAimSensitivity).toFixed(2)) }\n"
         "                                Slider {\n"
         "                                    Layout.fillWidth: true\n"
-        "                                    from: 0.10; to: 3.00; stepSize: 0.05\n"
+        "                                    from: 0.01; to: 100.00; stepSize: 0.05\n"
         "                                    value: Chiaki.settings.viceKeyAimSensitivity\n"
         "                                    onMoved: { Chiaki.settings.viceKeyAimSensitivity = value; if (Chiaki.session) Chiaki.session.setViceKeyAimSensitivity(value); }\n"
         "                                }\n"
@@ -355,7 +526,7 @@ def patch(root: Path) -> None:
         "\t\tvoid ClearViceKeyMouseMappings();\n",
         "persistent key map API")
     insert_after(settings_cpp,
-        "void Settings::SetViceKeyAimSensitivity(double value)\n{\n\tsettings.setValue(\"vickey/aim_sensitivity\", qBound(0.10, value, 3.0));\n}\n",
+        "void Settings::SetViceKeyAimSensitivity(double value)\n{\n\tsettings.setValue(\"vickey/aim_sensitivity\", qBound(0.01, value, 100.0));\n}\n",
         "\nQMap<int, int> Settings::GetViceKeyMappings() const\n{\n"
         "\tQMap<int, int> result;\n"
         "\tconst QString prefix = QStringLiteral(\"vickey/profiles/%1/keymap/\").arg(GetViceKeyLayout().toLower());\n"
@@ -400,6 +571,8 @@ def patch(root: Path) -> None:
         "session settings pointer")
     insert_after(stream_h,
         "\t\tvoid GoHome();\n",
+        "\t\tvoid HandleRawMouseDelta(int dx, int dy);\n"
+        "\t\tvoid ResetRawMouseInput();\n"
         "\t\tQ_INVOKABLE void setViceKeyMapping(int old_key, int new_key, const QString &action);\n"
         "\t\tQ_INVOKABLE void setViceKeyLayout(const QString &layout);\n"
         "\t\tQ_INVOKABLE void setViceKeySensitivity(double value);\n"
@@ -495,11 +668,11 @@ def patch(root: Path) -> None:
         "\t}\n"
         "}\n\n"
         "void StreamSession::setViceKeySensitivity(double value)\n{\n"
-        "\tvice_key_sensitivity = qBound(0.10, value, 10.0);\n"
+        "\tvice_key_sensitivity = qBound(0.01, value, 100.0);\n"
         "\tif (vice_key_settings) vice_key_settings->SetViceKeySensitivity(vice_key_sensitivity);\n"
         "}\n\n"
         "void StreamSession::setViceKeyAimSensitivity(double value)\n{\n"
-        "\tvice_key_aim_sensitivity = qBound(0.10, value, 3.0);\n"
+        "\tvice_key_aim_sensitivity = qBound(0.01, value, 100.0);\n"
         "\tif (vice_key_settings) vice_key_settings->SetViceKeyAimSensitivity(vice_key_aim_sensitivity);\n"
         "}\n\n"
         "void StreamSession::setViceKeyMouseMapping(int old_button, int new_button, const QString &action)\n{\n"
@@ -894,14 +1067,14 @@ def patch(root: Path) -> None:
         "                    visible: view.viceKeyActiveTab === 0\n"
         "                    Layout.fillWidth: true\n"
         "                    Label { text: \"Camera\"; color: \"#cbd5df\"; Layout.preferredWidth: 110 }\n"
-        "                    Slider { Layout.fillWidth: true; from: 0.10; to: 10.0; stepSize: 0.05; value: Chiaki.settings.viceKeySensitivity; onMoved: { Chiaki.settings.viceKeySensitivity = value; if (Chiaki.session) Chiaki.session.setViceKeySensitivity(value); } }\n"
+        "                    Slider { Layout.fillWidth: true; from: 0.01; to: 100.0; stepSize: 0.05; value: Chiaki.settings.viceKeySensitivity; onMoved: { Chiaki.settings.viceKeySensitivity = value; if (Chiaki.session) Chiaki.session.setViceKeySensitivity(value); } }\n"
         "                    Label { text: Number(Chiaki.settings.viceKeySensitivity).toFixed(2); color: \"#f2f4f7\"; Layout.preferredWidth: 48 }\n"
         "                }\n"
         "                RowLayout {\n"
         "                    visible: view.viceKeyActiveTab === 0\n"
         "                    Layout.fillWidth: true\n"
         "                    Label { text: \"Aim\"; color: \"#cbd5df\"; Layout.preferredWidth: 110 }\n"
-        "                    Slider { Layout.fillWidth: true; from: 0.10; to: 3.0; stepSize: 0.05; value: Chiaki.settings.viceKeyAimSensitivity; onMoved: { Chiaki.settings.viceKeyAimSensitivity = value; if (Chiaki.session) Chiaki.session.setViceKeyAimSensitivity(value); } }\n"
+        "                    Slider { Layout.fillWidth: true; from: 0.01; to: 100.0; stepSize: 0.05; value: Chiaki.settings.viceKeyAimSensitivity; onMoved: { Chiaki.settings.viceKeyAimSensitivity = value; if (Chiaki.session) Chiaki.session.setViceKeyAimSensitivity(value); } }\n"
         "                    Label { text: Number(Chiaki.settings.viceKeyAimSensitivity).toFixed(2); color: \"#f2f4f7\"; Layout.preferredWidth: 48 }\n"
         "                }\n"
         "                Label { text: view.viceKeyNotice; color: \"#9cc6ff\"; wrapMode: Text.WordWrap; Layout.fillWidth: true }\n"
