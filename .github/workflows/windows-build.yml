@@ -1,9 +1,9 @@
-name: ViceKey Windows build
+name: ViceKey Windows build and release
 
 on:
   workflow_dispatch:
   push:
-    branches: [main, feature/three-tab-controls]
+    branches: [feature/three-tab-controls]
     paths:
       - 'scripts/**'
       - 'profiles/**'
@@ -12,7 +12,7 @@ on:
       - '.github/workflows/windows-build.yml'
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   build:
@@ -38,10 +38,14 @@ jobs:
         shell: pwsh
         run: ./build-vickey.ps1
 
-      - name: Upload Windows package
-        uses: actions/upload-artifact@v4
+      - name: Publish Windows ZIP to GitHub Releases
+        uses: softprops/action-gh-release@v2
         with:
-          name: ViceKey-Windows
-          path: out/ViceKey-Windows.zip
-          if-no-files-found: error
-          retention-days: 14
+          tag_name: v0.1.0-preview.1
+          name: ViceKey 0.1.0 Preview 1 — Windows
+          target_commitish: ${{ github.sha }}
+          draft: false
+          prerelease: true
+          generate_release_notes: true
+          files: out/ViceKey-Windows.zip
+          fail_on_unmatched_files: true
