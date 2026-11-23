@@ -41,14 +41,14 @@ jobs:
       - name: Publish Windows ZIP to GitHub Releases
         uses: softprops/action-gh-release@v3
         with:
-          tag_name: v0.1.0-preview.4
-          name: ViceKey 0.1.0 Preview 4 — Windows
+          tag_name: v0.1.0-preview.5
+          name: ViceKey 0.1.0 Preview 5 — Windows
           target_commitish: ${{ github.sha }}
           draft: false
           prerelease: false
           make_latest: true
           overwrite_files: true
-          body: "Windows Raw Input mouse capture, smoother camera sampling, and expanded camera/aim sensitivity range."
+          body: "Windows Raw Input capture, improved mouse response, live sensitivity recovery, and drag-and-drop DualSense key mapping."
           generate_release_notes: true
           files: out/ViceKey-Windows.zip
           fail_on_unmatched_files: true
