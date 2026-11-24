@@ -713,7 +713,7 @@ static ViceKeyRawInputFilter *g_viceKeyRawInputFilter = nullptr;
 
     # Apply persistent user overrides after built-in AZERTY/QWERTY defaults.
     insert_after(stream_cpp,
-        "\tkey_map.insert(Qt::Key_P, CHIAKI_CONTROLLER_BUTTON_OPTIONS);\n",
+        "\tkey_map.insert(Qt::Key_CapsLock, CHIAKI_CONTROLLER_BUTTON_L3 | CHIAKI_CONTROLLER_BUTTON_R3);\n",
         "\tconst auto vice_key_overrides = settings->GetViceKeyMappings();\n"
         "\tfor (auto it = vice_key_overrides.cbegin(); it != vice_key_overrides.cend(); ++it) {\n"
         "\t\tconst Qt::Key key = static_cast<Qt::Key>(it.key());\n"
