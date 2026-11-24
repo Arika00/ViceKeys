@@ -26,6 +26,17 @@ def insert_after(path: Path, anchor: str, addition: str, label: str) -> None:
     path.write_text(source.replace(anchor, anchor + addition, 1), encoding="utf-8", newline="")
 
 
+def replace_section(path: Path, start: str, end: str, replacement: str, label: str) -> None:
+    source = path.read_text(encoding="utf-8")
+    if source.count(start) != 1 or source.count(end) != 1:
+        raise RuntimeError(f"{label}: expected unique section boundaries in {path}")
+    start_index = source.index(start)
+    end_index = source.index(end, start_index + len(start))
+    if end_index <= start_index:
+        raise RuntimeError(f"{label}: invalid section boundaries in {path}")
+    path.write_text(source[:start_index] + replacement + source[end_index:], encoding="utf-8", newline="")
+
+
 def patch(root: Path) -> None:
     gui = root / "gui"
     # Native wheel events are sent directly to StreamSession while gameplay has focus.
@@ -483,7 +494,10 @@ static ViceKeyRawInputFilter *g_viceKeyRawInputFilter = nullptr;
         "\t}\n"
         "}\n"
     )
-    replace_once(stream_cpp, old_mouse, new_mouse, "mouse-to-right-stick input")
+    replace_section(stream_cpp,
+        "void StreamSession::HandleMousePressEvent(QMouseEvent *event)\\n",
+        "void StreamSession::HandleKeyboardEvent(QKeyEvent *event)\\n",
+        new_mouse + "\\n", "mouse-to-right-stick input")
 
     old_keyboard = (
         "void StreamSession::HandleKeyboardEvent(QKeyEvent *event)\n{\n"
@@ -558,7 +572,10 @@ static ViceKeyRawInputFilter *g_viceKeyRawInputFilter = nullptr;
         "\tSendFeedbackState();\n"
         "}\n"
     )
-    replace_once(stream_cpp, old_keyboard, new_keyboard, "alias-safe keyboard input")
+    replace_section(stream_cpp,
+        "void StreamSession::HandleKeyboardEvent(QKeyEvent *event)\\n",
+        "void StreamSession::HandleTouchEvent(QTouchEvent *event, qreal width, qreal height)\\n",
+        new_keyboard + "\\n", "alias-safe keyboard input")
 
     # Keep Chiaki-ng global shortcuts intact; AZERTY Q is only interpreted during the stream.
     insert_after(mainwindow_cpp,
