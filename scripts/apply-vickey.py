@@ -1303,7 +1303,7 @@ bool StreamSession::HandleMouseWheelEvent(QWheelEvent *event)
         "                    TabButton { text: \"Clavier\" }\n"
         "                    TabButton { text: \"Réglages\" }\n"
         "                }\n"
-        """                RowLayout {\n"
+        """                RowLayout {\n
                     visible: view.viceKeyActiveTab === 1
                     Layout.fillWidth: true
                     Layout.fillHeight: true
