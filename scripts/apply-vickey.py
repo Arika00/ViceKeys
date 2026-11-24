@@ -59,9 +59,9 @@ def patch(root: Path) -> None:
         "\t\tdouble GetViceKeySensitivity() const;\n"
         "\t\tvoid SetViceKeySensitivity(double value);\n"
         "\t\tdouble GetViceKeyAimSensitivity() const;\n"
-        "\t\tvoid SetViceKeyAimSensitivity(double value);\n",
+        "\t\tvoid SetViceKeyAimSensitivity(double value);\n"
         "\t\tQString GetViceKeyLanguage() const;\n"
-        "\t\tvoid SetViceKeyLanguage(const QString &language);\n"
+        "\t\tvoid SetViceKeyLanguage(const QString &language);\n",
         "settings API")
 
     insert_after(settings_cpp,
@@ -71,9 +71,9 @@ def patch(root: Path) -> None:
         "double Settings::GetViceKeySensitivity() const\n{\n\treturn settings.value(\"vickey/sensitivity\", 1.0).toDouble();\n}\n"
         "void Settings::SetViceKeySensitivity(double value)\n{\n\tsettings.setValue(\"vickey/sensitivity\", qBound(0.01, value, 100.0));\n}\n"
         "double Settings::GetViceKeyAimSensitivity() const\n{\n\treturn settings.value(\"vickey/aim_sensitivity\", 0.7).toDouble();\n}\n"
-        "void Settings::SetViceKeyAimSensitivity(double value)\n{\n\tsettings.setValue(\"vickey/aim_sensitivity\", qBound(0.01, value, 100.0));\n}\n",
-        "QString Settings::GetViceKeyLanguage() const\\n{\\n\\treturn settings.value(\\\"vickey/language\\\", \\\"FR\\\").toString();\\n}\\n"
-        "void Settings::SetViceKeyLanguage(const QString &language)\\n{\\n\\tsettings.setValue(\\\"vickey/language\\\", language.compare(\\\"EN\\\", Qt::CaseInsensitive) == 0 ? \\\"EN\\\" : \\\"FR\\\");\\n}\\n"
+        "void Settings::SetViceKeyAimSensitivity(double value)\n{\n\tsettings.setValue(\"vickey/aim_sensitivity\", qBound(0.01, value, 100.0));\n}\n"
+        "QString Settings::GetViceKeyLanguage() const\n{\n\\treturn settings.value(\\"vickey/language\\", \\"FR\\").toString();\n}\n"
+        "void Settings::SetViceKeyLanguage(const QString &language)\n{\n\\tsettings.setValue(\\"vickey/language\\", language.compare(\\"EN\\", Qt::CaseInsensitive) == 0 ? \\"EN\\" : \\"FR\\");\n}\n",
         "settings implementation")
 
     insert_after(qmlsettings_h,
@@ -81,7 +81,7 @@ def patch(root: Path) -> None:
         "    Q_PROPERTY(QString viceKeyLayout READ viceKeyLayout WRITE setViceKeyLayout NOTIFY viceKeyLayoutChanged)\n"
         "    Q_PROPERTY(double viceKeySensitivity READ viceKeySensitivity WRITE setViceKeySensitivity NOTIFY viceKeySensitivityChanged)\n"
         "    Q_PROPERTY(double viceKeyAimSensitivity READ viceKeyAimSensitivity WRITE setViceKeyAimSensitivity NOTIFY viceKeyAimSensitivityChanged)\n"
-        "    Q_PROPERTY(QString viceKeyLanguage READ viceKeyLanguage WRITE setViceKeyLanguage NOTIFY viceKeyLanguageChanged)\\n"
+        "    Q_PROPERTY(QString viceKeyLanguage READ viceKeyLanguage WRITE setViceKeyLanguage NOTIFY viceKeyLanguageChanged)\n"
         "    Q_PROPERTY(int viceKeyOverlayKey READ viceKeyOverlayKey WRITE setViceKeyOverlayKey NOTIFY viceKeyOverlayKeyChanged)\n",
         "QML properties")
     insert_after(qmlsettings_h,
@@ -92,8 +92,8 @@ def patch(root: Path) -> None:
         "    void setViceKeySensitivity(double value);\n"
         "    double viceKeyAimSensitivity() const;\n"
         "    void setViceKeyAimSensitivity(double value);\n"
-        "    QString viceKeyLanguage() const;\\n"
-        "    void setViceKeyLanguage(const QString &language);\\n"
+        "    QString viceKeyLanguage() const;\n"
+        "    void setViceKeyLanguage(const QString &language);\n"
         "    int viceKeyOverlayKey() const;\n"
         "    void setViceKeyOverlayKey(int key);\n",
         "QML settings methods")
@@ -108,7 +108,7 @@ def patch(root: Path) -> None:
         "    void viceKeyLayoutChanged();\n"
         "    void viceKeySensitivityChanged();\n"
         "    void viceKeyAimSensitivityChanged();\n"
-        "    void viceKeyLanguageChanged();\\n"
+        "    void viceKeyLanguageChanged();\n"
         "    void viceKeyOverlayKeyChanged();\n",
         "QML settings signals")
 
@@ -128,8 +128,8 @@ def patch(root: Path) -> None:
         "void QmlSettings::setViceKeySensitivity(double value)\n{\n    settings->SetViceKeySensitivity(value);\n    emit viceKeySensitivityChanged();\n}\n"
         "double QmlSettings::viceKeyAimSensitivity() const\n{\n    return settings->GetViceKeyAimSensitivity();\n}\n"
         "void QmlSettings::setViceKeyAimSensitivity(double value)\n{\n    settings->SetViceKeyAimSensitivity(value);\n    emit viceKeyAimSensitivityChanged();\n}\n"
-        "QString QmlSettings::viceKeyLanguage() const\\n{\\n    return settings->GetViceKeyLanguage();\\n}\\n"
-        "void QmlSettings::setViceKeyLanguage(const QString &language)\\n{\\n    settings->SetViceKeyLanguage(language);\\n    emit viceKeyLanguageChanged();\\n}\\n"
+        "QString QmlSettings::viceKeyLanguage() const\n{\n    return settings->GetViceKeyLanguage();\n}\n"
+        "void QmlSettings::setViceKeyLanguage(const QString &language)\n{\n    settings->SetViceKeyLanguage(language);\n    emit viceKeyLanguageChanged();\n}\n"
         "int QmlSettings::viceKeyOverlayKey() const\n{\n    return settings->GetViceKeyOverlayKey();\n}\n"
         "void QmlSettings::setViceKeyOverlayKey(int key)\n{\n    settings->SetViceKeyOverlayKey(key);\n    emit viceKeyOverlayKeyChanged();\n}\n"
         "bool QmlSettings::exportViceKeyProfile()\n{\n"
