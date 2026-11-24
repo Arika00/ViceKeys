@@ -1228,8 +1228,16 @@ bool StreamSession::HandleMouseWheelEvent(QWheelEvent *event)
             viceKeyMouseDropTargets = targets;
         }
     }
+    function viceKeyIsVisibleTarget(target) {
+        var item = target;
+        while (item && item !== viceKeyOverlay) {
+            if (!item.visible) return false;
+            item = item.parent;
+        }
+        return item === viceKeyOverlay;
+    }
     function viceKeyIsDropTarget(target) {
-        if (!viceKeyDragActive || !target || !target.visible) return false;
+        if (!viceKeyDragActive || !viceKeyIsVisibleTarget(target)) return false;
         var p = target.mapToItem(viceKeyOverlay, 0, 0);
         return viceKeyDragPoint.x >= p.x && viceKeyDragPoint.x <= p.x + target.width
             && viceKeyDragPoint.y >= p.y && viceKeyDragPoint.y <= p.y + target.height;
@@ -1241,7 +1249,7 @@ bool StreamSession::HandleMouseWheelEvent(QWheelEvent *event)
         }
         for (var i = 0; i < viceKeyDropTargets.length; ++i) {
             var target = viceKeyDropTargets[i];
-            if (!target || !target.visible) continue;
+            if (!viceKeyIsVisibleTarget(target)) continue;
             var p = target.mapToItem(viceKeyOverlay, 0, 0);
             if (x >= p.x && x <= p.x + target.width && y >= p.y && y <= p.y + target.height) {
                 Chiaki.session.setViceKeyButton(target.keyCode, actionId);
@@ -1252,7 +1260,7 @@ bool StreamSession::HandleMouseWheelEvent(QWheelEvent *event)
         }
         for (var j = 0; j < viceKeyMouseDropTargets.length; ++j) {
             var mouseTarget = viceKeyMouseDropTargets[j];
-            if (!mouseTarget || !mouseTarget.visible) continue;
+            if (!viceKeyIsVisibleTarget(mouseTarget)) continue;
             var mousePoint = mouseTarget.mapToItem(viceKeyOverlay, 0, 0);
             if (x >= mousePoint.x && x <= mousePoint.x + mouseTarget.width
                     && y >= mousePoint.y && y <= mousePoint.y + mouseTarget.height) {
