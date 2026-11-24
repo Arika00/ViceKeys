@@ -107,7 +107,6 @@ def patch(root: Path) -> None:
     insert_after(qmlsettings_cpp,
         "#include <QProcess>\n",
         "#include <QFile>\n"
-        "#include <QFileDialog>\n"
         "#include <QJsonDocument>\n"
         "#include <QJsonObject>\n"
         "#include <QJsonParseError>\n",
@@ -280,15 +279,15 @@ public:
         if (!msg) return false;
 
         if (msg->hwnd == m_target && msg->message == WM_ACTIVATEAPP) {
-            if (msg->wParam) updateClip();
-            else {
+            if (msg->wParam && m_enabled) updateClip();
+            else if (!msg->wParam) {
                 ClipCursor(nullptr);
                 if (m_session) m_session->ResetRawMouseInput();
             }
             return false;
         }
         if (msg->hwnd == m_target && (msg->message == WM_SIZE || msg->message == WM_MOVE)) {
-            updateClip();
+            if (m_enabled) updateClip();
             return false;
         }
         if (msg->message != WM_INPUT || msg->hwnd != m_target) return false;
