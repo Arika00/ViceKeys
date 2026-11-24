@@ -1327,9 +1327,21 @@ bool StreamSession::HandleMouseWheelEvent(QWheelEvent *event)
         "                    Layout.fillWidth: true\n"
         "                    currentIndex: view.viceKeyActiveTab\n"
         "                    onCurrentIndexChanged: view.viceKeyActiveTab = currentIndex\n"
-        "                    TabButton { text: view.vt(\"Souris\", \"Mouse\") }\n"
-        "                    TabButton { text: view.vt(\"Clavier\", \"Keyboard\") }\n"
-        "                    TabButton { text: view.vt(\"Réglages\", \"Settings\") }\n"
+"""                    TabButton {
+                        text: view.vt("Souris", "Mouse")
+                        background: Rectangle { radius: 9; color: parent.checked ? "#203243" : "transparent"; border.color: parent.checked ? "#2c9fdf" : "transparent" }
+                        contentItem: Label { text: parent.text; color: parent.checked ? "#35baff" : "#aab6c5"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter; font.pixelSize: 13; font.bold: parent.checked }
+                    }
+                    TabButton {
+                        text: view.vt("Clavier", "Keyboard")
+                        background: Rectangle { radius: 9; color: parent.checked ? "#203243" : "transparent"; border.color: parent.checked ? "#2c9fdf" : "transparent" }
+                        contentItem: Label { text: parent.text; color: parent.checked ? "#35baff" : "#aab6c5"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter; font.pixelSize: 13; font.bold: parent.checked }
+                    }
+                    TabButton {
+                        text: view.vt("Réglages", "Settings")
+                        background: Rectangle { radius: 9; color: parent.checked ? "#203243" : "transparent"; border.color: parent.checked ? "#2c9fdf" : "transparent" }
+                        contentItem: Label { text: parent.text; color: parent.checked ? "#35baff" : "#aab6c5"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter; font.pixelSize: 13; font.bold: parent.checked }
+                    }"""
         "                }\n"
         """                RowLayout {\n
                     visible: view.viceKeyActiveTab === 1
@@ -1396,12 +1408,12 @@ bool StreamSession::HandleMouseWheelEvent(QWheelEvent *event)
                                     }
                                 }
                             }
-                            Label { text: "Glisse un bouton DualSense sur une touche pour l'affecter"; color: "#91a4b8"; wrapMode: Text.WordWrap }
+                            Label { text: view.vt("Glisse un bouton DualSense sur une touche pour l'affecter", "Drag a DualSense button onto a key to bind it"); color: "#8293a5"; wrapMode: Text.WordWrap }
                         }
                     }
 
                 }
-                Label { visible: view.viceKeyActiveTab === 0 || view.viceKeyActiveTab === 1; text: "BOUTONS DUALSENSE À GLISSER"; color: "#e2e8f0"; font.bold: true }
+                Label { visible: view.viceKeyActiveTab === 0 || view.viceKeyActiveTab === 1; text: view.vt("BOUTONS DUALSENSE À GLISSER", "DRAG DUALSENSE BUTTONS"); color: "#e2e8f0"; font.bold: true }
                 Flow {
                     visible: view.viceKeyActiveTab === 0 || view.viceKeyActiveTab === 1
                     Layout.fillWidth: true
@@ -1431,7 +1443,7 @@ bool StreamSession::HandleMouseWheelEvent(QWheelEvent *event)
                         }
                     }
                 }
-                Label { visible: view.viceKeyActiveTab === 0 || view.viceKeyActiveTab === 1; text: "Le bouton PS5 choisi est envoyé tel quel au jeu. Les actions contextuelles restent gérées par GTA."; color: "#91a4b8"; wrapMode: Text.WordWrap; Layout.fillWidth: true }
+                Label { visible: view.viceKeyActiveTab === 0 || view.viceKeyActiveTab === 1; text: view.vt("Le bouton PS5 choisi est envoyé tel quel au jeu. Les actions contextuelles restent gérées par GTA.", "The selected PS button is sent directly to the game. Context-sensitive actions remain handled by GTA."); color: "#8293a5"; wrapMode: Text.WordWrap; Layout.fillWidth: true }
 """
         "                RowLayout {\n"
         "                    visible: view.viceKeyActiveTab === 2\n"
@@ -1446,18 +1458,6 @@ bool StreamSession::HandleMouseWheelEvent(QWheelEvent *event)
         "                    Label { text: view.vt(\"Raccourci de l’overlay\", \"Overlay shortcut\"); color: \"#cbd5df\" }\n"
         "                    Button { text: view.viceKeyHotkeyCapture ? view.vt(\"Appuyez sur une touche…\", \"Press shortcut…\") : view.viceKeyName(Chiaki.settings.viceKeyOverlayKey); onClicked: { view.viceKeyHotkeyCapture = true; viceKeyOverlay.forceActiveFocus(); view.viceKeyNotice = view.vt(\"Appuyez sur une touche pour le raccourci\", \"Press a key for the overlay shortcut\"); } }\n"
         "                    Item { Layout.fillWidth: true }\n"
-        "                }\n"
-        "                RowLayout {\n"
-        "                    visible: view.viceKeyActiveTab === 2\n"
-        "                    Label { text: view.vt(\"Disposition du clavier\", \"Keyboard layout\"); color: \"#cbd5df\" }\n"
-        "                    ComboBox {\n"
-        "                        id: viceKeyLayoutBox\n"
-        "                        model: [\"AZERTY\", \"QWERTY\"]\n"
-        "                        currentIndex: Chiaki.settings.viceKeyLayout === \"QWERTY\" ? 1 : 0\n"
-        "                        onActivated: function(index) { view.viceKeySetLayout(model[index]); }\n"
-        "                    }\n"
-        "                    Item { Layout.fillWidth: true }\n"
-        "                    Label { text: view.vt(\"Les changements sont enregistrés automatiquement\", \"Changes save automatically\"); color: \"#91a4b8\" }\n"
         "                }\n"
         "                Label { visible: false; text: \"COMMANDES CLAVIER\"; color: \"#e2e8f0\"; font.bold: true }\n"
         "                ComboBox {\n"
@@ -1489,50 +1489,62 @@ bool StreamSession::HandleMouseWheelEvent(QWheelEvent *event)
         "                        }\n"
         "                    }\n"
         "                }\n"
-        "ColumnLayout {"
-        "    visible: view.viceKeyActiveTab === 0"
-        "    Layout.fillWidth: true"
-        "    Layout.fillHeight: true"
-        "    spacing: 13"
-        "    Label { text: view.vt(\"AFFECTATION DES BOUTONS\", \"MOUSE BUTTON MAPPING\"); color: \"#e5ebf2\"; font.bold: true; font.pixelSize: 15 }"
-        "    Flow { Layout.fillWidth: true; spacing: 9"
-        "        Repeater { model: view.viceKeyMouseTargets"
-        "            delegate: Rectangle {"
-        "                id: mouseDropTarget"
-        "                property int inputCode: modelData.input"
-        "                property string inputName: modelData.label"
-        "                property string mappedAction: Chiaki.session ? Chiaki.session.viceKeyActionForMouseInput(inputCode) : \"none\""
-        "                width: Math.max(132, Math.min(190, parent.width / 3 - 12)); height: 66; radius: 12"
-        "                color: mouseDropArea.containsDrag ? \"#20384a\" : \"#202630\""
-        "                border.color: mouseDropArea.containsDrag ? \"#36b8ff\" : \"#36414e\""
-        "                Column { anchors.centerIn: parent; spacing: 5"
-        "                    Text { text: mouseDropTarget.inputName; color: \"#e8edf3\"; font.pixelSize: 12; font.bold: true; anchors.horizontalCenter: parent.horizontalCenter }"
-        "                    Text { text: view.viceKeyActionLabel(mouseDropTarget.mappedAction); visible: mouseDropTarget.mappedAction !== \"none\" && mouseDropTarget.mappedAction !== \"\"; color: \"#8fcfff\"; font.pixelSize: 10; anchors.horizontalCenter: parent.horizontalCenter }"
-        "                    Text { text: view.vt(\"Glisser pour affecter\", \"Drop to assign\"); visible: mouseDropTarget.mappedAction === \"none\" || mouseDropTarget.mappedAction === \"\"; color: \"#748397\"; font.pixelSize: 9; anchors.horizontalCenter: parent.horizontalCenter }"
-        "                }"
-        "                DropArea { id: mouseDropArea; anchors.fill: parent"
-        "                    onDropped: function(drop) {"
-        "                        if (!drop.source || !drop.source.actionId || !Chiaki.session) return;"
-        "                        Chiaki.session.setViceKeyMouseInput(mouseDropTarget.inputCode, drop.source.actionId);"
-        "                        view.viceKeyNotice = mouseDropTarget.inputName + \" ← \" + view.viceKeyActionLabel(drop.source.actionId);"
-        "                        drop.acceptProposedAction();"
-        "                    }"
-        "                }"
-        "            }"
-        "        }"
-        "    }"
-        "    Label { text: view.vt(\"SENSIBILITÉ\", \"SENSITIVITY\"); color: \"#e5ebf2\"; font.bold: true; font.pixelSize: 15 }"
-        "    RowLayout { Layout.fillWidth: true"
-        "        Label { text: view.vt(\"Caméra\", \"Camera\"); color: \"#bdc8d5\"; Layout.preferredWidth: 105 }"
-        "        Slider { id: viceKeyCameraSensitivity; Layout.fillWidth: true; from: 0.01; to: 5.0; stepSize: 0.05; value: Chiaki.settings.viceKeySensitivity; onMoved: { Chiaki.settings.viceKeySensitivity = value; if (Chiaki.session) Chiaki.session.setViceKeySensitivity(value); } }"
-        "        Label { text: Number(viceKeyCameraSensitivity.value).toFixed(2); color: \"#f3f6fa\"; Layout.preferredWidth: 46 }"
-        "    }"
-        "    RowLayout { Layout.fillWidth: true"
-        "        Label { text: \"Aim\"; color: \"#bdc8d5\"; Layout.preferredWidth: 105 }"
-        "        Slider { id: viceKeyAimSensitivity; Layout.fillWidth: true; from: 0.01; to: 5.0; stepSize: 0.05; value: Chiaki.settings.viceKeyAimSensitivity; onMoved: { Chiaki.settings.viceKeyAimSensitivity = value; if (Chiaki.session) Chiaki.session.setViceKeyAimSensitivity(value); } }"
-        "        Label { text: Number(viceKeyAimSensitivity.value).toFixed(2); color: \"#f3f6fa\"; Layout.preferredWidth: 46 }"
-        "    }"
-        "}"
+        """ColumnLayout {
+    visible: view.viceKeyActiveTab === 0
+    Layout.fillWidth: true
+    Layout.fillHeight: true
+    spacing: 13
+    Label { text: view.vt("AFFECTATION DES BOUTONS", "MOUSE BUTTON MAPPING"); color: "#e5ebf2"; font.bold: true; font.pixelSize: 15 }
+    Flow {
+        Layout.fillWidth: true
+        spacing: 9
+        Repeater {
+            model: view.viceKeyMouseTargets
+            delegate: Rectangle {
+                id: mouseDropTarget
+                property int inputCode: modelData.input
+                property string inputName: modelData.label
+                property string mappedAction: Chiaki.session ? Chiaki.session.viceKeyActionForMouseInput(inputCode) : "none"
+                width: Math.max(132, Math.min(190, parent.width / 3 - 12))
+                height: 66
+                radius: 12
+                color: mouseDropArea.containsDrag ? "#20384a" : "#202630"
+                border.color: mouseDropArea.containsDrag ? "#36b8ff" : "#36414e"
+                Column {
+                    anchors.centerIn: parent
+                    spacing: 5
+                    Text { text: mouseDropTarget.inputName; color: "#e8edf3"; font.pixelSize: 12; font.bold: true; anchors.horizontalCenter: parent.horizontalCenter }
+                    Text { text: view.viceKeyActionLabel(mouseDropTarget.mappedAction); visible: mouseDropTarget.mappedAction !== "none" && mouseDropTarget.mappedAction !== ""; color: "#8fcfff"; font.pixelSize: 10; anchors.horizontalCenter: parent.horizontalCenter }
+                    Text { text: view.vt("Glisser pour affecter", "Drop to assign"); visible: mouseDropTarget.mappedAction === "none" || mouseDropTarget.mappedAction === ""; color: "#748397"; font.pixelSize: 9; anchors.horizontalCenter: parent.horizontalCenter }
+                }
+                DropArea {
+                    id: mouseDropArea
+                    anchors.fill: parent
+                    onDropped: function(drop) {
+                        if (!drop.source || !drop.source.actionId || !Chiaki.session) return;
+                        Chiaki.session.setViceKeyMouseInput(mouseDropTarget.inputCode, drop.source.actionId);
+                        view.viceKeyNotice = mouseDropTarget.inputName + " ← " + view.viceKeyActionLabel(drop.source.actionId);
+                        drop.acceptProposedAction();
+                    }
+                }
+            }
+        }
+    }
+    Label { text: view.vt("SENSIBILITÉ", "SENSITIVITY"); color: "#e5ebf2"; font.bold: true; font.pixelSize: 15 }
+    RowLayout {
+        Layout.fillWidth: true
+        Label { text: view.vt("Caméra", "Camera"); color: "#bdc8d5"; Layout.preferredWidth: 105 }
+        Slider { id: viceKeyCameraSensitivity; Layout.fillWidth: true; from: 0.01; to: 5.0; stepSize: 0.05; value: Chiaki.settings.viceKeySensitivity; onMoved: { Chiaki.settings.viceKeySensitivity = value; if (Chiaki.session) Chiaki.session.setViceKeySensitivity(value); } }
+        Label { text: Number(viceKeyCameraSensitivity.value).toFixed(2); color: "#f3f6fa"; Layout.preferredWidth: 46 }
+    }
+    RowLayout {
+        Layout.fillWidth: true
+        Label { text: "Aim"; color: "#bdc8d5"; Layout.preferredWidth: 105 }
+        Slider { id: viceKeyAimSensitivity; Layout.fillWidth: true; from: 0.01; to: 5.0; stepSize: 0.05; value: Chiaki.settings.viceKeyAimSensitivity; onMoved: { Chiaki.settings.viceKeyAimSensitivity = value; if (Chiaki.session) Chiaki.session.setViceKeyAimSensitivity(value); } }
+        Label { text: Number(viceKeyAimSensitivity.value).toFixed(2); color: "#f3f6fa"; Layout.preferredWidth: 46 }
+    }
+}"""
+
         "                Label { text: view.viceKeyNotice; color: \"#9cc6ff\"; wrapMode: Text.WordWrap; Layout.fillWidth: true }\n"
         "                RowLayout {\n"
         "                    Layout.fillWidth: true\n"
