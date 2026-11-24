@@ -797,7 +797,11 @@ static ViceKeyRawInputFilter *g_viceKeyRawInputFilter = nullptr;
     # Apply persistent user overrides after built-in AZERTY/QWERTY defaults.
     insert_after(stream_cpp,
         "\tkey_map.insert(Qt::Key_CapsLock, CHIAKI_CONTROLLER_BUTTON_L3 | CHIAKI_CONTROLLER_BUTTON_R3);\n",
-        "\tconst auto vice_key_overrides = settings->GetViceKeyMappings();\n"
+        "\tauto vice_key_overrides = settings->GetViceKeyMappings();\n"
+        "\tif (vice_key_overrides.value(static_cast<int>(Qt::Key_Control), 0) == CHIAKI_CONTROLLER_BUTTON_L3) {\n"
+        "\t\tvice_key_overrides.insert(static_cast<int>(Qt::Key_Control), CHIAKI_CONTROLLER_BUTTON_MOON);\n"
+        "\t\tsettings->SetViceKeyMapping(static_cast<int>(Qt::Key_Control), CHIAKI_CONTROLLER_BUTTON_MOON);\n"
+        "\t}\n"
         "\tfor (auto it = vice_key_overrides.cbegin(); it != vice_key_overrides.cend(); ++it) {\n"
         "\t\tconst Qt::Key key = static_cast<Qt::Key>(it.key());\n"
         "\t\tif (it.value() <= 0) key_map.remove(key);\n"
@@ -1018,7 +1022,11 @@ bool StreamSession::HandleMouseWheelEvent(QWheelEvent *event)
         "\tkey_map.insert(Qt::Key_Escape, CHIAKI_CONTROLLER_BUTTON_OPTIONS);\n"
         "\tkey_map.insert(Qt::Key_CapsLock, CHIAKI_CONTROLLER_BUTTON_L3 | CHIAKI_CONTROLLER_BUTTON_R3);\n"
         "\tif (vice_key_settings) {\n"
-        "\t\tconst auto overrides = vice_key_settings->GetViceKeyMappings();\n"
+        "\t\tauto overrides = vice_key_settings->GetViceKeyMappings();\n"
+        "\t\tif (overrides.value(static_cast<int>(Qt::Key_Control), 0) == CHIAKI_CONTROLLER_BUTTON_L3) {\n"
+        "\t\t\toverrides.insert(static_cast<int>(Qt::Key_Control), CHIAKI_CONTROLLER_BUTTON_MOON);\n"
+        "\t\t\tvice_key_settings->SetViceKeyMapping(static_cast<int>(Qt::Key_Control), CHIAKI_CONTROLLER_BUTTON_MOON);\n"
+        "\t\t}\n"
         "\t\tfor (auto it = overrides.cbegin(); it != overrides.cend(); ++it) {\n"
         "\t\t\tconst Qt::Key key = static_cast<Qt::Key>(it.key());\n"
         "\t\t\tif (it.value() <= 0) key_map.remove(key); else key_map.insert(key, it.value());\n"
