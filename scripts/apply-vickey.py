@@ -60,6 +60,8 @@ def patch(root: Path) -> None:
         "\t\tvoid SetViceKeySensitivity(double value);\n"
         "\t\tdouble GetViceKeyAimSensitivity() const;\n"
         "\t\tvoid SetViceKeyAimSensitivity(double value);\n",
+        "\t\tQString GetViceKeyLanguage() const;\n"
+        "\t\tvoid SetViceKeyLanguage(const QString &language);\n"
         "settings API")
 
     insert_after(settings_cpp,
@@ -70,6 +72,8 @@ def patch(root: Path) -> None:
         "void Settings::SetViceKeySensitivity(double value)\n{\n\tsettings.setValue(\"vickey/sensitivity\", qBound(0.01, value, 100.0));\n}\n"
         "double Settings::GetViceKeyAimSensitivity() const\n{\n\treturn settings.value(\"vickey/aim_sensitivity\", 0.7).toDouble();\n}\n"
         "void Settings::SetViceKeyAimSensitivity(double value)\n{\n\tsettings.setValue(\"vickey/aim_sensitivity\", qBound(0.01, value, 100.0));\n}\n",
+        "QString Settings::GetViceKeyLanguage() const\\n{\\n\\treturn settings.value(\\\"vickey/language\\\", \\\"FR\\\").toString();\\n}\\n"
+        "void Settings::SetViceKeyLanguage(const QString &language)\\n{\\n\\tsettings.setValue(\\\"vickey/language\\\", language.compare(\\\"EN\\\", Qt::CaseInsensitive) == 0 ? \\\"EN\\\" : \\\"FR\\\");\\n}\\n"
         "settings implementation")
 
     insert_after(qmlsettings_h,
@@ -77,6 +81,7 @@ def patch(root: Path) -> None:
         "    Q_PROPERTY(QString viceKeyLayout READ viceKeyLayout WRITE setViceKeyLayout NOTIFY viceKeyLayoutChanged)\n"
         "    Q_PROPERTY(double viceKeySensitivity READ viceKeySensitivity WRITE setViceKeySensitivity NOTIFY viceKeySensitivityChanged)\n"
         "    Q_PROPERTY(double viceKeyAimSensitivity READ viceKeyAimSensitivity WRITE setViceKeyAimSensitivity NOTIFY viceKeyAimSensitivityChanged)\n"
+        "    Q_PROPERTY(QString viceKeyLanguage READ viceKeyLanguage WRITE setViceKeyLanguage NOTIFY viceKeyLanguageChanged)\\n"
         "    Q_PROPERTY(int viceKeyOverlayKey READ viceKeyOverlayKey WRITE setViceKeyOverlayKey NOTIFY viceKeyOverlayKeyChanged)\n",
         "QML properties")
     insert_after(qmlsettings_h,
@@ -87,6 +92,8 @@ def patch(root: Path) -> None:
         "    void setViceKeySensitivity(double value);\n"
         "    double viceKeyAimSensitivity() const;\n"
         "    void setViceKeyAimSensitivity(double value);\n"
+        "    QString viceKeyLanguage() const;\\n"
+        "    void setViceKeyLanguage(const QString &language);\\n"
         "    int viceKeyOverlayKey() const;\n"
         "    void setViceKeyOverlayKey(int key);\n",
         "QML settings methods")
@@ -101,6 +108,7 @@ def patch(root: Path) -> None:
         "    void viceKeyLayoutChanged();\n"
         "    void viceKeySensitivityChanged();\n"
         "    void viceKeyAimSensitivityChanged();\n"
+        "    void viceKeyLanguageChanged();\\n"
         "    void viceKeyOverlayKeyChanged();\n",
         "QML settings signals")
 
@@ -120,6 +128,8 @@ def patch(root: Path) -> None:
         "void QmlSettings::setViceKeySensitivity(double value)\n{\n    settings->SetViceKeySensitivity(value);\n    emit viceKeySensitivityChanged();\n}\n"
         "double QmlSettings::viceKeyAimSensitivity() const\n{\n    return settings->GetViceKeyAimSensitivity();\n}\n"
         "void QmlSettings::setViceKeyAimSensitivity(double value)\n{\n    settings->SetViceKeyAimSensitivity(value);\n    emit viceKeyAimSensitivityChanged();\n}\n"
+        "QString QmlSettings::viceKeyLanguage() const\\n{\\n    return settings->GetViceKeyLanguage();\\n}\\n"
+        "void QmlSettings::setViceKeyLanguage(const QString &language)\\n{\\n    settings->SetViceKeyLanguage(language);\\n    emit viceKeyLanguageChanged();\\n}\\n"
         "int QmlSettings::viceKeyOverlayKey() const\n{\n    return settings->GetViceKeyOverlayKey();\n}\n"
         "void QmlSettings::setViceKeyOverlayKey(int key)\n{\n    settings->SetViceKeyOverlayKey(key);\n    emit viceKeyOverlayKeyChanged();\n}\n"
         "bool QmlSettings::exportViceKeyProfile()\n{\n"
@@ -624,7 +634,7 @@ static ViceKeyRawInputFilter *g_viceKeyRawInputFilter = nullptr;
         "                            ColumnLayout {\n"
         "                                anchors.fill: parent\n"
         "                                RowLayout {\n"
-        "                                    Label { text: qsTr(\"Keyboard layout\") }\n"
+        "                                    Label { text: qsTr(view.vt(\"Disposition du clavier\", \"Keyboard layout\")) }\n"
         "                                    ComboBox {\n"
         "                                        model: [\"AZERTY\", \"QWERTY\"]\n"
         "                                        currentIndex: Chiaki.settings.viceKeyLayout === \"QWERTY\" ? 1 : 0\n"
@@ -1094,6 +1104,8 @@ bool StreamSession::HandleMouseWheelEvent(QWheelEvent *event)
     property int viceKeyMouseCaptureIndex: -1
     property string viceKeyNotice: ""
     property int viceKeyActiveTab: 0
+    property string viceKeyLanguage: Chiaki.settings.viceKeyLanguage
+    function vt(fr, en) { return viceKeyLanguage === "EN" ? en : fr; }
     property bool viceKeyHotkeyCapture: false
     property var viceKeyRows: [
         { label: "Avancer", action: "left_y_up", key: Qt.Key_Z, display: "Z" },
@@ -1228,7 +1240,7 @@ bool StreamSession::HandleMouseWheelEvent(QWheelEvent *event)
         "        anchors.fill: parent\n"
         "        z: 1000\n"
         "        visible: false\n"
-        "        color: \"#d90b0f14\"\n"
+        "        color: \"#d90b0b0b\"\n"
         "        focus: visible\n"
         "        onVisibleChanged: {\n"
         "            if (visible) { if (Chiaki.session) Chiaki.session.setViceKeyMouseCaptureEnabled(false); view.grabInput(viceKeyOverlay); }\n"
@@ -1286,8 +1298,8 @@ bool StreamSession::HandleMouseWheelEvent(QWheelEvent *event)
         "            width: Math.min(parent.width - 36, 1160)\n"
         "            height: Math.min(parent.height - 36, 780)\n"
         "            radius: 12\n"
-        "            color: \"#f0181d24\"\n"
-        "            border.color: \"#596675\"\n"
+        "            color: \"#f0191919\"\n"
+        "            border.color: \"#303030\"\n"
         "            border.width: 1\n"
         "            ColumnLayout {\n"
         "                anchors.fill: parent\n"
@@ -1304,9 +1316,9 @@ bool StreamSession::HandleMouseWheelEvent(QWheelEvent *event)
         "                    Layout.fillWidth: true\n"
         "                    currentIndex: view.viceKeyActiveTab\n"
         "                    onCurrentIndexChanged: view.viceKeyActiveTab = currentIndex\n"
-        "                    TabButton { text: \"Souris\" }\n"
-        "                    TabButton { text: \"Clavier\" }\n"
-        "                    TabButton { text: \"Réglages\" }\n"
+        "                    TabButton { text: view.vt(\"Souris\", \"Mouse\") }\n"
+        "                    TabButton { text: view.vt(\"Clavier\", \"Keyboard\") }\n"
+        "                    TabButton { text: view.vt(\"Réglages\", \"Settings\") }\n"
         "                }\n"
         """                RowLayout {\n
                     visible: view.viceKeyActiveTab === 1
@@ -1335,8 +1347,8 @@ bool StreamSession::HandleMouseWheelEvent(QWheelEvent *event)
                                             width: modelData.width || 39
                                             height: 55
                                             radius: 5
-                                            color: "#252d38"
-                                            border.color: "#516173"
+                                            color: "#292929"
+                                            border.color: "#414141"
                                             border.width: 1
                                             Column {
                                                 anchors.centerIn: parent
@@ -1363,7 +1375,7 @@ bool StreamSession::HandleMouseWheelEvent(QWheelEvent *event)
                             Label { text: "Glisse un bouton DualSense sur une touche pour l'affecter"; color: "#91a4b8"; wrapMode: Text.WordWrap }
                         }
                     }
-                    Rectangle { width: 1; Layout.fillHeight: true; color: "#3a4654" }
+                    Rectangle { width: 1; Layout.fillHeight: true; color: "#383838" }
                     ColumnLayout {
                         Layout.preferredWidth: 230
                         Layout.fillHeight: true
@@ -1377,8 +1389,8 @@ bool StreamSession::HandleMouseWheelEvent(QWheelEvent *event)
                                 Layout.fillWidth: true
                                 height: 49
                                 radius: 6
-                                color: "#252d38"
-                                border.color: "#516173"
+                                color: "#292929"
+                                border.color: "#414141"
                                 Column {
                                     anchors.centerIn: parent
                                     spacing: 2
@@ -1414,8 +1426,8 @@ bool StreamSession::HandleMouseWheelEvent(QWheelEvent *event)
                             width: Math.max(64, chipLabel.implicitWidth + 22)
                             height: 34
                             radius: 7
-                            color: "#34485e"
-                            border.color: "#6483a3"
+        "                            color: actionId === \\"cross\\" ? \\"#2878ff\\" : actionId === \\"circle\\" ? \\"#f04444\\" : actionId === \\"triangle\\" ? \\"#28b86b\\" : actionId === \\"square\\" ? \\"#b56bff\\" : \\"#292929\\"\\n"
+        "                            border.color: actionId === \\"cross\\" ? \\"#70a5ff\\" : actionId === \\"circle\\" ? \\"#ff8a8a\\" : actionId === \\"triangle\\" ? \\"#78e0a3\\" : actionId === \\"square\\" ? \\"#d1a2ff\\" : \\"#414141\\"\\n"
                             Drag.active: chipDrag.active
                             Drag.source: controllerChip
                             Drag.hotSpot.x: width / 2
@@ -1430,8 +1442,10 @@ bool StreamSession::HandleMouseWheelEvent(QWheelEvent *event)
 """
         "                RowLayout {\n"
         "                    visible: view.viceKeyActiveTab === 2\n"
-        "                    Button { text: \"Export profile…\"; onClicked: { if (Chiaki.settings.exportViceKeyProfile()) view.viceKeyNotice = \"Profile exported\"; } }\n"
-        "                    Button { text: \"Import profile…\"; onClicked: { if (Chiaki.settings.importViceKeyProfile()) { if (Chiaki.session) { Chiaki.session.setViceKeyLayout(Chiaki.settings.viceKeyLayout); Chiaki.session.setViceKeySensitivity(Chiaki.settings.viceKeySensitivity); Chiaki.session.setViceKeyAimSensitivity(Chiaki.settings.viceKeyAimSensitivity); } view.viceKeySetLayout(Chiaki.settings.viceKeyLayout); view.viceKeyNotice = \"Profile imported\"; } } }\n"
+        "                    Label { text: view.vt(\\"Langue\\", \\"Language\\"); color: \\"#cbd5df\\" }\\n"
+        "                    ComboBox { model: [\\"Français\\", \\"English\\"]; currentIndex: view.viceKeyLanguage === \\"EN\\" ? 1 : 0; onActivated: function(index) { Chiaki.settings.viceKeyLanguage = index === 1 ? \\"EN\\" : \\"FR\\"; view.viceKeyLanguage = Chiaki.settings.viceKeyLanguage; } }\\n"
+        "                    Button { text: view.vt(\"Exporter le profil…\", \"Export profile…\"); onClicked: { if (Chiaki.settings.exportViceKeyProfile()) view.viceKeyNotice = \"Profile exported\"; } }\n"
+        "                    Button { text: view.vt(\"Importer un profil…\", \"Import profile…\"); onClicked: { if (Chiaki.settings.importViceKeyProfile()) { if (Chiaki.session) { Chiaki.session.setViceKeyLayout(Chiaki.settings.viceKeyLayout); Chiaki.session.setViceKeySensitivity(Chiaki.settings.viceKeySensitivity); Chiaki.session.setViceKeyAimSensitivity(Chiaki.settings.viceKeyAimSensitivity); } view.viceKeySetLayout(Chiaki.settings.viceKeyLayout); view.viceKeyNotice = \"Profile imported\"; } } }\n"
         "                    Item { Layout.fillWidth: true }\n"
         "                }\n"
         "                RowLayout {\n"
@@ -1450,7 +1464,7 @@ bool StreamSession::HandleMouseWheelEvent(QWheelEvent *event)
         "                        onActivated: function(index) { view.viceKeySetLayout(model[index]); }\n"
         "                    }\n"
         "                    Item { Layout.fillWidth: true }\n"
-        "                    Label { text: \"Changes save automatically\"; color: \"#91a4b8\" }\n"
+        "                    Label { text: view.vt(\"Les changements sont enregistrés automatiquement\", \"Changes save automatically\"); color: \"#91a4b8\" }\n"
         "                }\n"
         "                Label { visible: false; text: \"COMMANDES CLAVIER\"; color: \"#e2e8f0\"; font.bold: true }\n"
         "                ComboBox {\n"
@@ -1482,7 +1496,7 @@ bool StreamSession::HandleMouseWheelEvent(QWheelEvent *event)
         "                        }\n"
         "                    }\n"
         "                }\n"
-        "                Label { visible: view.viceKeyActiveTab === 0; text: \"BOUTONS DE LA SOURIS\"; color: \"#e2e8f0\"; font.bold: true }\n"
+        "                Label { visible: view.viceKeyActiveTab === 0; text: view.vt(\"MOUSE BUTTONS\", \"BOUTONS DE LA SOURIS\"); color: \"#e2e8f0\"; font.bold: true }\n"
         "                RowLayout {\n"
         "                    visible: view.viceKeyActiveTab === 0\n"
         "                    Layout.fillWidth: true\n"
@@ -1495,7 +1509,7 @@ bool StreamSession::HandleMouseWheelEvent(QWheelEvent *event)
         "                        }\n"
         "                    }\n"
         "                }\n"
-        "                Label { visible: view.viceKeyActiveTab === 2; text: \"SENSIBILITÉ SOURIS\"; color: \"#e2e8f0\"; font.bold: true }\n"
+        "                Label { visible: view.viceKeyActiveTab === 2; text: view.vt(\"MOUSE SENSITIVITY\", \"SENSIBILITÉ SOURIS\"); color: \"#e2e8f0\"; font.bold: true }\n"
         "                RowLayout {\n"
         "                    visible: view.viceKeyActiveTab === 2\n"
         "                    Layout.fillWidth: true\n"
@@ -1514,7 +1528,7 @@ bool StreamSession::HandleMouseWheelEvent(QWheelEvent *event)
         "                RowLayout {\n"
         "                    Layout.fillWidth: true\n"
         "                    Label { text: \"Left click = R2 · Right click = L2 · Tab + wheel = L2 / R2 · optional side buttons start unassigned\"; color: \"#9aa8b7\"; wrapMode: Text.WordWrap; Layout.fillWidth: true }\n"
-        "                    Button { text: \"Done\"; onClicked: viceKeyOverlay.visible = false }\n"
+        "                    Button { text: view.vt(\"Terminé\", \"Done\"); onClicked: viceKeyOverlay.visible = false }\n"
         "                }\n"
         "            }\n"
         "        }\n"
