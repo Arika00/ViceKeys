@@ -1286,7 +1286,7 @@ bool StreamSession::HandleMouseWheelEvent(QWheelEvent *event)
         "                    TabButton { text: \"Clavier\" }\n"
         "                    TabButton { text: \"Réglages\" }\n"
         "                }\n"
-        "                RowLayout {\n"
+        """                RowLayout {\n"
                     visible: view.viceKeyActiveTab === 1
                     Layout.fillWidth: true
                     Layout.fillHeight: true
@@ -1405,7 +1405,7 @@ bool StreamSession::HandleMouseWheelEvent(QWheelEvent *event)
                     }
                 }
                 Label { visible: view.viceKeyActiveTab === 1; text: "Le bouton PS5 choisi est envoyé tel quel au jeu. Les actions contextuelles restent gérées par GTA."; color: "#91a4b8"; wrapMode: Text.WordWrap; Layout.fillWidth: true }
-""
+"""
         "                RowLayout {\n"
         "                    visible: view.viceKeyActiveTab === 2\n"
         "                    Button { text: \"Export profile…\"; onClicked: { if (Chiaki.settings.exportViceKeyProfile()) view.viceKeyNotice = \"Profile exported\"; } }\n"
