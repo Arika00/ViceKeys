@@ -495,9 +495,9 @@ static ViceKeyRawInputFilter *g_viceKeyRawInputFilter = nullptr;
         "}\n"
     )
     replace_section(stream_cpp,
-        "void StreamSession::HandleMousePressEvent(QMouseEvent *event)\\n",
-        "void StreamSession::HandleKeyboardEvent(QKeyEvent *event)\\n",
-        new_mouse + "\\n", "mouse-to-right-stick input")
+        "void StreamSession::HandleMousePressEvent(QMouseEvent *event)\n",
+        "void StreamSession::HandleKeyboardEvent(QKeyEvent *event)\n",
+        new_mouse + "\n", "mouse-to-right-stick input")
 
     old_keyboard = (
         "void StreamSession::HandleKeyboardEvent(QKeyEvent *event)\n{\n"
@@ -573,9 +573,9 @@ static ViceKeyRawInputFilter *g_viceKeyRawInputFilter = nullptr;
         "}\n"
     )
     replace_section(stream_cpp,
-        "void StreamSession::HandleKeyboardEvent(QKeyEvent *event)\\n",
-        "void StreamSession::HandleTouchEvent(QTouchEvent *event, qreal width, qreal height)\\n",
-        new_keyboard + "\\n", "alias-safe keyboard input")
+        "void StreamSession::HandleKeyboardEvent(QKeyEvent *event)\n",
+        "void StreamSession::HandleTouchEvent(QTouchEvent *event, qreal width, qreal height)\n",
+        new_keyboard + "\n", "alias-safe keyboard input")
 
     # Keep Chiaki-ng global shortcuts intact; AZERTY Q is only interpreted during the stream.
     insert_after(mainwindow_cpp,
