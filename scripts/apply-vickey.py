@@ -1254,6 +1254,32 @@ bool StreamSession::HandleMouseWheelEvent(QWheelEvent *event)
         var labels = { none: "", cover: view.vt("Se mettre à couvert", "Take cover"), crouch: view.vt("S’accroupir", "Crouch"), cross: view.vt("✕ Croix", "✕ Cross"), circle: view.vt("○ Rond", "○ Circle"), square: view.vt("□ Carré", "□ Square"), triangle: view.vt("△ Triangle", "△ Triangle"), l1: "L1", r1: "R1", l2: "L2", r2: "R2", l3: "L3", r3: "R3", focus: "L3 + R3", dpad_up: "D-Pad ↑", dpad_down: "D-Pad ↓", dpad_left: "D-Pad ←", dpad_right: "D-Pad →", touchpad: "Touchpad", options: "Options", left_y_up: "Stick G ↑", left_y_down: "Stick G ↓", left_x_down: "Stick G ←", left_x_up: "Stick G →" };
         return labels[action] || "—";
     }
+    function viceKeyActionColor(action) {
+        var colors = {
+            cross: "#2478ef", cover: "#2478ef",
+            circle: "#df3c43", square: "#d7a51e", triangle: "#239e61",
+            l1: "#28557c", l2: "#28557c", r1: "#743941", r2: "#743941",
+            l3: "#7651a8", r3: "#a36b32", focus: "#555d70",
+            dpad_up: "#287b78", dpad_down: "#287b78", dpad_left: "#287b78", dpad_right: "#287b78",
+            touchpad: "#247c9e", options: "#596579",
+            left_y_up: "#344b62", left_y_down: "#344b62", left_x_down: "#344b62", left_x_up: "#344b62",
+            crouch: "#7651a8"
+        };
+        return colors[action] || "#222832";
+    }
+    function viceKeyActionBorderColor(action) {
+        var colors = {
+            cross: "#69aaff", cover: "#69aaff",
+            circle: "#ff848a", square: "#f2d06e", triangle: "#69d69b",
+            l1: "#5d91bd", l2: "#5d91bd", r1: "#ba6870", r2: "#ba6870",
+            l3: "#b18cdd", r3: "#d5a06b", focus: "#9aa4b7",
+            dpad_up: "#69c8c1", dpad_down: "#69c8c1", dpad_left: "#69c8c1", dpad_right: "#69c8c1",
+            touchpad: "#64c7e9", options: "#a0adbf",
+            left_y_up: "#788da5", left_y_down: "#788da5", left_x_down: "#788da5", left_x_up: "#788da5",
+            crouch: "#b18cdd"
+        };
+        return colors[action] || "#394451";
+    }
     function viceKeyName(key) {
         if (key >= Qt.Key_A && key <= Qt.Key_Z) return String.fromCharCode(key);
         if (key === Qt.Key_Space) return "Space";
@@ -1452,21 +1478,21 @@ bool StreamSession::HandleMouseWheelEvent(QWheelEvent *event)
                                             id: physicalKey
                                             property int keyCode: modelData.key
                                             property string keyLabel: modelData.label
+                                            property string mappedAction: { var revision = view.viceKeyMappingRevision; return Chiaki.session ? Chiaki.session.viceKeyActionForKey(keyCode) : "none"; }
                                             width: modelData.width || 39
                                             height: 55
                                             radius: 10
-                                            color: physicalKeyDrop.containsDrag ? "#20384a" : "#222832"
-                                            border.color: physicalKeyDrop.containsDrag ? "#36b8ff" : "#394451"
-                                            border.width: physicalKeyDrop.containsDrag ? 2 : 1
+                                            color: physicalKeyDrop.containsDrag ? "#20384a" : view.viceKeyActionColor(mappedAction)
+                                            border.color: physicalKeyDrop.containsDrag ? "#36b8ff" : view.viceKeyActionBorderColor(mappedAction)
+                                            border.width: physicalKeyDrop.containsDrag ? 2 : (mappedAction === "none" ? 1 : 1.5)
                                             Column {
                                                 anchors.centerIn: parent
                                                 spacing: 3
                                                 Text { text: physicalKey.keyLabel; color: "#eef2f6"; font.bold: true; font.pixelSize: 12; anchors.horizontalCenter: parent.horizontalCenter }
                                                 Text {
-                                                    property string mappedAction: { var revision = view.viceKeyMappingRevision; return Chiaki.session ? Chiaki.session.viceKeyActionForKey(physicalKey.keyCode) : "none"; }
-                                                    text: view.viceKeyActionLabel(mappedAction)
-                                                    visible: mappedAction !== "none" && mappedAction !== ""
-                                                    color: "#8fcfff"; font.pixelSize: 9; anchors.horizontalCenter: parent.horizontalCenter
+                                                    text: view.viceKeyActionLabel(physicalKey.mappedAction)
+                                                    visible: physicalKey.mappedAction !== "none" && physicalKey.mappedAction !== ""
+                                                    color: "#ffffff"; font.pixelSize: 9; font.bold: true; anchors.horizontalCenter: parent.horizontalCenter
                                                 }
                                             }
                                             DropArea {
