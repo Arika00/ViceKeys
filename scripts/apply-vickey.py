@@ -554,8 +554,10 @@ static ViceKeyRawInputFilter *g_viceKeyRawInputFilter = nullptr;
         "\tRefreshViceKeyInputState();\n"
         "\tSendFeedbackState();\n"
         "}\n"
-    )\n"
-    replace_once(stream_cpp, old_keyboard, new_keyboard, "alias-safe keyboard input")\n\n    replace_once(stream_cpp, old_mouse, new_mouse, "mouse-to-right-stick input")
+    )
+    replace_once(stream_cpp, old_keyboard, new_keyboard, "alias-safe keyboard input")
+
+    replace_once(stream_cpp, old_mouse, new_mouse, "mouse-to-right-stick input")
 
     # Keep Chiaki-ng global shortcuts intact; AZERTY Q is only interpreted during the stream.
     insert_after(mainwindow_cpp,
