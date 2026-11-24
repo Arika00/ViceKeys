@@ -15,6 +15,12 @@ pacboy -S --needed --noconfirm \
   python-glad:p python-jinja:p python-protobuf:p qt6-base:p qt6-declarative:p \
   qt6-svg:p shaderc:p speexdsp:p spirv-cross:p vulkan:p vulkan-headers:p
 
+# Fail fast on malformed patcher code or profile JSON before downloading upstream sources.
+bash -n "$ROOT/build-vickey.sh"
+python -m py_compile "$ROOT/scripts/apply-vickey.py"
+python -m json.tool "$ROOT/profiles/gta6_azerty.json" >/dev/null
+python -m json.tool "$ROOT/profiles/gta6_qwerty.json" >/dev/null
+
 if [[ ! -d "$SRC/.git" ]]; then
   git clone --branch v1.10.1 --depth 1 --recurse-submodules https://github.com/chiaki-ng/chiaki-ng.git "$SRC"
 else
@@ -48,7 +54,6 @@ rm -rf "$OUT/ViceKey-Windows"
 ./scripts/deploy-windows-msys2.sh "$OUT/ViceKey-Windows" build/gui/chiaki.exe \
   "$SRC/build/third-party/cpp-steam-tools" /mingw64 gui/src/qml
 cp "$OUT/ViceKey-Windows/chiaki.exe" "$OUT/ViceKey-Windows/ViceKey.exe"
-cp "$ROOT/README.md" "$OUT/ViceKey-Windows/README.txt"
 cp "$ROOT/LICENCE-NOTICE.txt" "$OUT/ViceKey-Windows/LICENCE-NOTICE.txt"
 if [[ -f "$SRC/LICENSE" ]]; then cp "$SRC/LICENSE" "$OUT/ViceKey-Windows/LICENSE.txt"; fi
 cp "$ROOT/profiles/gta6_azerty.json" "$OUT/ViceKey-Windows/"
