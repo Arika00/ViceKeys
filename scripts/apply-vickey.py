@@ -366,7 +366,7 @@ static ViceKeyRawInputFilter *g_viceKeyRawInputFilter = nullptr;
         "\tkey_map.insert(Qt::Key_5, CHIAKI_CONTROLLER_BUTTON_L3);\n"
         "\tkey_map.insert(Qt::Key_6, CHIAKI_CONTROLLER_BUTTON_R3);\n"
         "\tkey_map.insert(Qt::Key_Control, CHIAKI_CONTROLLER_BUTTON_L3);\n"
-        "\tkey_map.insert(vickey_qwerty ? Qt::Key_G : Qt::Key_A, CHIAKI_CONTROLLER_BUTTON_CROSS);\n"
+        "\tkey_map.insert(vickey_qwerty ? Qt::Key_G : Qt::Key_A, CHIAKI_CONTROLLER_BUTTON_R1);\n"
         "\tkey_map.insert(Qt::Key_Escape, CHIAKI_CONTROLLER_BUTTON_OPTIONS);\n"
         "\tkey_map.insert(Qt::Key_CapsLock, CHIAKI_CONTROLLER_BUTTON_L3 | CHIAKI_CONTROLLER_BUTTON_R3);\n"
     )
@@ -826,7 +826,8 @@ static ViceKeyRawInputFilter *g_viceKeyRawInputFilter = nullptr;
         "\telse if (action == \"left_y_down\") button = static_cast<int>(ControllerButtonExt::ANALOG_STICK_LEFT_Y_DOWN);\n"
         "\telse if (action == \"left_x_up\") button = static_cast<int>(ControllerButtonExt::ANALOG_STICK_LEFT_X_UP);\n"
         "\telse if (action == \"left_x_down\") button = static_cast<int>(ControllerButtonExt::ANALOG_STICK_LEFT_X_DOWN);\n"
-        "\telse if (action == \"cross\" || action == \"cover\") button = CHIAKI_CONTROLLER_BUTTON_CROSS;\n"
+        "\telse if (action == \"cross\") button = CHIAKI_CONTROLLER_BUTTON_CROSS;\n"
+        "\telse if (action == \"cover\" || action == \"r1\") button = CHIAKI_CONTROLLER_BUTTON_R1;\n"
         "\telse if (action == \"crouch\") button = CHIAKI_CONTROLLER_BUTTON_L3;\n"
         "\telse if (action == \"circle\") button = CHIAKI_CONTROLLER_BUTTON_MOON;\n"
         "\telse if (action == \"square\") button = CHIAKI_CONTROLLER_BUTTON_BOX;\n"
@@ -853,7 +854,8 @@ static ViceKeyRawInputFilter *g_viceKeyRawInputFilter = nullptr;
     if (action == "left_y_down") return static_cast<int>(ControllerButtonExt::ANALOG_STICK_LEFT_Y_DOWN);
     if (action == "left_x_up") return static_cast<int>(ControllerButtonExt::ANALOG_STICK_LEFT_X_UP);
     if (action == "left_x_down") return static_cast<int>(ControllerButtonExt::ANALOG_STICK_LEFT_X_DOWN);
-    if (action == "cross" || action == "cover") return CHIAKI_CONTROLLER_BUTTON_CROSS;
+    if (action == "cross") return CHIAKI_CONTROLLER_BUTTON_CROSS;
+    if (action == "cover" || action == "r1") return CHIAKI_CONTROLLER_BUTTON_R1;
     if (action == "crouch") return CHIAKI_CONTROLLER_BUTTON_L3;
     if (action == "circle") return CHIAKI_CONTROLLER_BUTTON_MOON;
     if (action == "square") return CHIAKI_CONTROLLER_BUTTON_BOX;
@@ -916,7 +918,7 @@ QString StreamSession::viceKeyActionForKey(int key) const
         return QStringLiteral("crouch");
     const bool qwerty = vice_key_settings && vice_key_settings->GetViceKeyLayout().compare("QWERTY", Qt::CaseInsensitive) == 0;
     const int coverKey = qwerty ? Qt::Key_G : Qt::Key_A;
-    if (key == coverKey && value == CHIAKI_CONTROLLER_BUTTON_CROSS)
+    if (key == coverKey && value == CHIAKI_CONTROLLER_BUTTON_R1)
         return QStringLiteral("cover");
     return ViceKeyActionName(value);
 }
@@ -1017,7 +1019,7 @@ bool StreamSession::HandleMouseWheelEvent(QWheelEvent *event)
         "\tkey_map.insert(Qt::Key_5, CHIAKI_CONTROLLER_BUTTON_L3);\n"
         "\tkey_map.insert(Qt::Key_6, CHIAKI_CONTROLLER_BUTTON_R3);\n"
         "\tkey_map.insert(Qt::Key_Control, CHIAKI_CONTROLLER_BUTTON_L3);\n"
-        "\tkey_map.insert(qwerty ? Qt::Key_G : Qt::Key_A, CHIAKI_CONTROLLER_BUTTON_CROSS);\n"
+        "\tkey_map.insert(qwerty ? Qt::Key_G : Qt::Key_A, CHIAKI_CONTROLLER_BUTTON_R1);\n"
         "\tkey_map.insert(Qt::Key_Escape, CHIAKI_CONTROLLER_BUTTON_OPTIONS);\n"
         "\tkey_map.insert(Qt::Key_CapsLock, CHIAKI_CONTROLLER_BUTTON_L3 | CHIAKI_CONTROLLER_BUTTON_R3);\n"
         "\tif (vice_key_settings) {\n"
@@ -1063,7 +1065,8 @@ bool StreamSession::HandleMouseWheelEvent(QWheelEvent *event)
         "\telse if (action == \"left_y_down\") value = static_cast<int>(ControllerButtonExt::ANALOG_STICK_LEFT_Y_DOWN);\n"
         "\telse if (action == \"left_x_up\") value = static_cast<int>(ControllerButtonExt::ANALOG_STICK_LEFT_X_UP);\n"
         "\telse if (action == \"left_x_down\") value = static_cast<int>(ControllerButtonExt::ANALOG_STICK_LEFT_X_DOWN);\n"
-        "\telse if (action == \"cross\" || action == \"cover\") value = CHIAKI_CONTROLLER_BUTTON_CROSS;\n"
+        "\telse if (action == \"cross\") value = CHIAKI_CONTROLLER_BUTTON_CROSS;\n"
+        "\telse if (action == \"cover\" || action == \"r1\") value = CHIAKI_CONTROLLER_BUTTON_R1;\n"
         "\telse if (action == \"crouch\") value = CHIAKI_CONTROLLER_BUTTON_L3;\n"
         "\telse if (action == \"circle\") value = CHIAKI_CONTROLLER_BUTTON_MOON;\n"
         "\telse if (action == \"square\") value = CHIAKI_CONTROLLER_BUTTON_BOX;\n"
@@ -1106,7 +1109,7 @@ bool StreamSession::HandleMouseWheelEvent(QWheelEvent *event)
         "\tprofile.insert(Qt::Key_5, CHIAKI_CONTROLLER_BUTTON_L3);\n"
         "\tprofile.insert(Qt::Key_6, CHIAKI_CONTROLLER_BUTTON_R3);\n"
         "\tprofile.insert(Qt::Key_Control, CHIAKI_CONTROLLER_BUTTON_L3);\n"
-        "\tprofile.insert(qwerty ? Qt::Key_G : Qt::Key_A, CHIAKI_CONTROLLER_BUTTON_CROSS);\n"
+        "\tprofile.insert(qwerty ? Qt::Key_G : Qt::Key_A, CHIAKI_CONTROLLER_BUTTON_R1);\n"
         "\tprofile.insert(Qt::Key_Escape, CHIAKI_CONTROLLER_BUTTON_OPTIONS);\n"
         "\tprofile.insert(Qt::Key_CapsLock, CHIAKI_CONTROLLER_BUTTON_L3 | CHIAKI_CONTROLLER_BUTTON_R3);\n"
         "\tif (vice_key_settings) { const auto overrides = vice_key_settings->GetViceKeyMappings(); for (auto it = overrides.cbegin(); it != overrides.cend(); ++it) { if (it.value() <= 0) profile.remove(it.key()); else profile.insert(it.key(), it.value()); } }\n"
