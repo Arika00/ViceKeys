@@ -634,7 +634,7 @@ static ViceKeyRawInputFilter *g_viceKeyRawInputFilter = nullptr;
         "                            ColumnLayout {\n"
         "                                anchors.fill: parent\n"
         "                                RowLayout {\n"
-        "                                    Label { text: qsTr("Keyboard layout") }\n"
+        "                                    Label { text: qsTr(\"Keyboard layout\") }\n"
         "                                    ComboBox {\n"
         "                                        model: [\"AZERTY\", \"QWERTY\"]\n"
         "                                        currentIndex: Chiaki.settings.viceKeyLayout === \"QWERTY\" ? 1 : 0\n"
