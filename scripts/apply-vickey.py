@@ -1475,14 +1475,14 @@ bool StreamSession::HandleMouseWheelEvent(QWheelEvent *event)
                                                     Chiaki.session.setViceKeyButton(physicalKey.keyCode, drop.source.actionId);
                                                     view.viceKeyMappingRevision++;
                                                     view.viceKeyNotice = physicalKey.keyLabel + " ← " + view.viceKeyActionLabel(drop.source.actionId);
-                                                    drop.acceptProposedAction();
+                                                    drop.accept(Qt.CopyAction);
                                                 }
                                             }
                                         }
                                     }
                                 }
                             }
-                            Label { text: view.vt("Glisse un bouton DualSense sur une touche pour l'affecter", "Drag a DualSense button onto a key to bind it"); color: "#8293a5"; wrapMode: Text.WordWrap }
+                            Label { text: view.vt("Carte : A = L1 · E = R1. Ctrl = Accroupir. A = Couverture (AZERTY).", "Map: A = L1 · E = R1. Ctrl = Crouch. G = Cover (QWERTY)."); color: "#8293a5"; wrapMode: Text.WordWrap }
                         }
                     }
 
@@ -1511,23 +1511,25 @@ bool StreamSession::HandleMouseWheelEvent(QWheelEvent *event)
                                     color: actionId === "cross" ? "#2478ef" : actionId === "circle" ? "#df3c43" : actionId === "triangle" ? "#239e61" : actionId === "square" ? "#d7a51e" : "#293340"
                                     border.color: actionId === "cross" ? "#69aaff" : actionId === "circle" ? "#ff848a" : actionId === "triangle" ? "#69d69b" : actionId === "square" ? "#f2d06e" : "#435163"
                                 }
-                                Drag.active: chipDrag.active
+                                Drag.active: chipDragArea.drag.active
                                 Drag.source: controllerChip
                                 Drag.hotSpot.x: width / 2
                                 Drag.hotSpot.y: height / 2
                                 Drag.supportedActions: Qt.CopyAction
                                 Drag.keys: ["vickey-button"]
                                 Text { id: chipLabel; anchors.centerIn: parent; text: modelData.label; color: "#f0f4f8"; font.pixelSize: 11; font.bold: true }
-                                DragHandler {
-                                    id: chipDrag
-                                    target: controllerChip
-                                    dragThreshold: 5
-                                    onActiveChanged: {
-                                        if (!active) {
-                                            controllerChip.x = 0;
-                                            controllerChip.y = 0;
-                                        }
-                                    }
+                                MouseArea {
+                                    id: chipDragArea
+                                    anchors.fill: parent
+                                    acceptedButtons: Qt.LeftButton
+                                    preventStealing: true
+                                    drag.target: controllerChip
+                                    drag.axis: Drag.XAndYAxis
+                                    drag.threshold: 5
+                                    onReleased: Qt.callLater(function() {
+                                        controllerChip.x = 0;
+                                        controllerChip.y = 0;
+                                    })
                                 }
                             }
                         }
@@ -1616,7 +1618,7 @@ bool StreamSession::HandleMouseWheelEvent(QWheelEvent *event)
                         Chiaki.session.setViceKeyMouseInput(mouseDropTarget.inputCode, drop.source.actionId);
                         view.viceKeyMappingRevision++;
                         view.viceKeyNotice = mouseDropTarget.inputName + " ← " + view.viceKeyActionLabel(drop.source.actionId);
-                        drop.acceptProposedAction();
+                        drop.accept(Qt.CopyAction);
                     }
                 }
             }
