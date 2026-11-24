@@ -72,8 +72,8 @@ def patch(root: Path) -> None:
         "void Settings::SetViceKeySensitivity(double value)\n{\n\tsettings.setValue(\"vickey/sensitivity\", qBound(0.01, value, 100.0));\n}\n"
         "double Settings::GetViceKeyAimSensitivity() const\n{\n\treturn settings.value(\"vickey/aim_sensitivity\", 0.7).toDouble();\n}\n"
         "void Settings::SetViceKeyAimSensitivity(double value)\n{\n\tsettings.setValue(\"vickey/aim_sensitivity\", qBound(0.01, value, 100.0));\n}\n"
-        "QString Settings::GetViceKeyLanguage() const\n{\n\\treturn settings.value(\\"vickey/language\\", \\"FR\\").toString();\n}\n"
-        "void Settings::SetViceKeyLanguage(const QString &language)\n{\n\\tsettings.setValue(\\"vickey/language\\", language.compare(\\"EN\\", Qt::CaseInsensitive) == 0 ? \\"EN\\" : \\"FR\\");\n}\n",
+        "QString Settings::GetViceKeyLanguage() const\n{\n\treturn settings.value(\"vickey/language\", \"FR\").toString();\n}\n"
+        "void Settings::SetViceKeyLanguage(const QString &language)\n{\n\tsettings.setValue(\"vickey/language\", language.compare(\"EN\", Qt::CaseInsensitive) == 0 ? \"EN\" : \"FR\");\n}\n",
         "settings implementation")
 
     insert_after(qmlsettings_h,
