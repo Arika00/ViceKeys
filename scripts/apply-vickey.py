@@ -1575,9 +1575,9 @@ bool StreamSession::HandleMouseWheelEvent(QWheelEvent *event)
                                             width: modelData.width || 39
                                             height: 55
                                             radius: 10
-                                            color: view.viceKeyIsDropTarget(physicalKey) ? "#20384a" : view.viceKeyActionColor(mappedAction)
-                                            border.color: view.viceKeyIsDropTarget(physicalKey) ? "#36b8ff" : view.viceKeyActionBorderColor(mappedAction)
-                                            border.width: view.viceKeyIsDropTarget(physicalKey) ? 2 : (mappedAction === "none" ? 1 : 1.5)
+                                            color: view.viceKeyIsDropTarget(physicalKey) ? "#20384a" : "#222832"
+                                            border.color: view.viceKeyIsDropTarget(physicalKey) ? "#36b8ff" : "#394451"
+                                            border.width: view.viceKeyIsDropTarget(physicalKey) ? 2 : 1
                                             Column {
                                                 anchors.centerIn: parent
                                                 spacing: 3
@@ -1630,8 +1630,8 @@ bool StreamSession::HandleMouseWheelEvent(QWheelEvent *event)
                                 Rectangle {
                                     anchors.fill: parent
                                     radius: 11
-                                    color: actionId === "cross" ? "#2478ef" : actionId === "circle" ? "#df3c43" : actionId === "triangle" ? "#239e61" : actionId === "square" ? "#d7a51e" : "#293340"
-                                    border.color: actionId === "cross" ? "#69aaff" : actionId === "circle" ? "#ff848a" : actionId === "triangle" ? "#69d69b" : actionId === "square" ? "#f2d06e" : "#435163"
+                                    color: controllerChip.actionId === "cross" ? "#2478ef" : controllerChip.actionId === "circle" ? "#df3c43" : controllerChip.actionId === "triangle" ? "#239e61" : controllerChip.actionId === "square" ? "#d7a51e" : "#293340"
+                                    border.color: controllerChip.actionId === "cross" ? "#69aaff" : controllerChip.actionId === "circle" ? "#ff848a" : controllerChip.actionId === "triangle" ? "#69d69b" : controllerChip.actionId === "square" ? "#f2d06e" : "#435163"
                                 }
                                 Text { id: chipLabel; anchors.centerIn: parent; text: modelData.label; color: "#f0f4f8"; font.pixelSize: 11; font.bold: true }
                                 MouseArea {
