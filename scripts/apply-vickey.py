@@ -634,7 +634,7 @@ static ViceKeyRawInputFilter *g_viceKeyRawInputFilter = nullptr;
         "                            ColumnLayout {\n"
         "                                anchors.fill: parent\n"
         "                                RowLayout {\n"
-        "                                    Label { text: qsTr(view.vt(\"Disposition du clavier\", \"Keyboard layout\")) }\n"
+        "                                    Label { text: qsTr("Keyboard layout") }\n"
         "                                    ComboBox {\n"
         "                                        model: [\"AZERTY\", \"QWERTY\"]\n"
         "                                        currentIndex: Chiaki.settings.viceKeyLayout === \"QWERTY\" ? 1 : 0\n"
@@ -1108,14 +1108,14 @@ bool StreamSession::HandleMouseWheelEvent(QWheelEvent *event)
     function vt(fr, en) { return viceKeyLanguage === "EN" ? en : fr; }
     property bool viceKeyHotkeyCapture: false
     property var viceKeyRows: [
-        { label: "Avancer", action: "left_y_up", key: Qt.Key_Z, display: "Z" },
-        { label: "Gauche", action: "left_x_down", key: Qt.Key_Q, display: "Q" },
-        { label: "Reculer", action: "left_y_down", key: Qt.Key_S, display: "S" },
-        { label: "Droite", action: "left_x_up", key: Qt.Key_D, display: "D" },
-        { label: "Croix", action: "cross", key: Qt.Key_Space, display: "Space" },
-        { label: "Rond", action: "circle", key: Qt.Key_F, display: "F" },
-        { label: "Carré", action: "square", key: Qt.Key_R, display: "R" },
-        { label: "Triangle", action: "triangle", key: Qt.Key_E, display: "E" },
+        { label: view.vt("Avancer", "Move forward"), action: "left_y_up", key: Qt.Key_Z, display: "Z" },
+        { label: view.vt("Gauche", "Move left"), action: "left_x_down", key: Qt.Key_Q, display: "Q" },
+        { label: view.vt("Reculer", "Move backward"), action: "left_y_down", key: Qt.Key_S, display: "S" },
+        { label: view.vt("Droite", "Move right"), action: "left_x_up", key: Qt.Key_D, display: "D" },
+        { label: view.vt("Croix", "Cross"), action: "cross", key: Qt.Key_Space, display: "Space" },
+        { label: view.vt("Rond", "Circle"), action: "circle", key: Qt.Key_F, display: "F" },
+        { label: view.vt("Carré", "Square"), action: "square", key: Qt.Key_R, display: "R" },
+        { label: view.vt("Triangle", "Triangle"), action: "triangle", key: Qt.Key_E, display: "E" },
         { label: "R1", action: "r1", key: Qt.Key_Tab, display: "Tab" },
         { label: "L3", action: "l3", key: Qt.Key_Shift, display: "Shift" },
         { label: "R3", action: "r3", key: Qt.Key_C, display: "C" },
@@ -1143,8 +1143,8 @@ bool StreamSession::HandleMouseWheelEvent(QWheelEvent *event)
         { label: "Aucune", action: "none" }
     ]
     property var viceKeyMouseTargets: [
-        { label: "Clic gauche", input: Qt.LeftButton }, { label: "Clic droit", input: Qt.RightButton },
-        { label: "Clic molette", input: Qt.MiddleButton }, { label: "Molette ↑ (Tab)", input: 1001 },
+        { label: view.vt("Clic gauche", "Left click"), input: Qt.LeftButton }, { label: view.vt("Clic droit", "Right click"), input: Qt.RightButton },
+        { label: view.vt("Clic molette", "Middle click"), input: Qt.MiddleButton }, { label: "Molette ↑ (Tab)", input: 1001 },
         { label: "Molette ↓ (Tab)", input: 1002 }, { label: "Bouton 4", input: Qt.XButton1 },
         { label: "Bouton 5", input: Qt.XButton2 }
     ]
@@ -1426,8 +1426,8 @@ bool StreamSession::HandleMouseWheelEvent(QWheelEvent *event)
                             width: Math.max(64, chipLabel.implicitWidth + 22)
                             height: 34
                             radius: 7
-        "                            color: actionId === \\"cross\\" ? \\"#2878ff\\" : actionId === \\"circle\\" ? \\"#f04444\\" : actionId === \\"triangle\\" ? \\"#28b86b\\" : actionId === \\"square\\" ? \\"#b56bff\\" : \\"#292929\\"\\n"
-        "                            border.color: actionId === \\"cross\\" ? \\"#70a5ff\\" : actionId === \\"circle\\" ? \\"#ff8a8a\\" : actionId === \\"triangle\\" ? \\"#78e0a3\\" : actionId === \\"square\\" ? \\"#d1a2ff\\" : \\"#414141\\"\\n"
+                            color: actionId === "cross" ? "#2878ff" : actionId === "circle" ? "#f04444" : actionId === "triangle" ? "#28b86b" : actionId === "square" ? "#b56bff" : "#292929"
+                            border.color: actionId === "cross" ? "#70a5ff" : actionId === "circle" ? "#ff8a8a" : actionId === "triangle" ? "#78e0a3" : actionId === "square" ? "#d1a2ff" : "#414141"
                             Drag.active: chipDrag.active
                             Drag.source: controllerChip
                             Drag.hotSpot.x: width / 2
@@ -1442,21 +1442,21 @@ bool StreamSession::HandleMouseWheelEvent(QWheelEvent *event)
 """
         "                RowLayout {\n"
         "                    visible: view.viceKeyActiveTab === 2\n"
-        "                    Label { text: view.vt(\\"Langue\\", \\"Language\\"); color: \\"#cbd5df\\" }\\n"
-        "                    ComboBox { model: [\\"Français\\", \\"English\\"]; currentIndex: view.viceKeyLanguage === \\"EN\\" ? 1 : 0; onActivated: function(index) { Chiaki.settings.viceKeyLanguage = index === 1 ? \\"EN\\" : \\"FR\\"; view.viceKeyLanguage = Chiaki.settings.viceKeyLanguage; } }\\n"
+        "                    Label { text: view.vt(\"Langue\", \"Language\"); color: \"#cbd5df\" }\n"
+        "                    ComboBox { model: [\"Français\", \"English\"]; currentIndex: view.viceKeyLanguage === \"EN\" ? 1 : 0; onActivated: function(index) { Chiaki.settings.viceKeyLanguage = index === 1 ? \"EN\" : \"FR\"; view.viceKeyLanguage = Chiaki.settings.viceKeyLanguage; } }\n"
         "                    Button { text: view.vt(\"Exporter le profil…\", \"Export profile…\"); onClicked: { if (Chiaki.settings.exportViceKeyProfile()) view.viceKeyNotice = \"Profile exported\"; } }\n"
         "                    Button { text: view.vt(\"Importer un profil…\", \"Import profile…\"); onClicked: { if (Chiaki.settings.importViceKeyProfile()) { if (Chiaki.session) { Chiaki.session.setViceKeyLayout(Chiaki.settings.viceKeyLayout); Chiaki.session.setViceKeySensitivity(Chiaki.settings.viceKeySensitivity); Chiaki.session.setViceKeyAimSensitivity(Chiaki.settings.viceKeyAimSensitivity); } view.viceKeySetLayout(Chiaki.settings.viceKeyLayout); view.viceKeyNotice = \"Profile imported\"; } } }\n"
         "                    Item { Layout.fillWidth: true }\n"
         "                }\n"
         "                RowLayout {\n"
         "                    visible: view.viceKeyActiveTab === 2\n"
-        "                    Label { text: \"Overlay shortcut\"; color: \"#cbd5df\" }\n"
-        "                    Button { text: view.viceKeyHotkeyCapture ? \"Press shortcut…\" : view.viceKeyName(Chiaki.settings.viceKeyOverlayKey); onClicked: { view.viceKeyHotkeyCapture = true; viceKeyOverlay.forceActiveFocus(); view.viceKeyNotice = \"Press a key for the overlay shortcut\"; } }\n"
+        "                    Label { text: view.vt(\"Raccourci de l’overlay\", \"Overlay shortcut\"); color: \"#cbd5df\" }\n"
+        "                    Button { text: view.viceKeyHotkeyCapture ? view.vt(\"Appuyez sur une touche…\", \"Press shortcut…\") : view.viceKeyName(Chiaki.settings.viceKeyOverlayKey); onClicked: { view.viceKeyHotkeyCapture = true; viceKeyOverlay.forceActiveFocus(); view.viceKeyNotice = view.vt(\"Appuyez sur une touche pour le raccourci\", \"Press a key for the overlay shortcut\"); } }\n"
         "                    Item { Layout.fillWidth: true }\n"
         "                }\n"
         "                RowLayout {\n"
         "                    visible: view.viceKeyActiveTab === 2\n"
-        "                    Label { text: \"Keyboard layout\"; color: \"#cbd5df\" }\n"
+        "                    Label { text: view.vt(\"Disposition du clavier\", \"Keyboard layout\"); color: \"#cbd5df\" }\n"
         "                    ComboBox {\n"
         "                        id: viceKeyLayoutBox\n"
         "                        model: [\"AZERTY\", \"QWERTY\"]\n"
@@ -1490,7 +1490,7 @@ bool StreamSession::HandleMouseWheelEvent(QWheelEvent *event)
         "                                    Layout.preferredWidth: 130\n"
         "                                    text: view.viceKeyCaptureIndex === view.viceKeyRows.indexOf(modelData) ? \"Press a key…\" : modelData.display\n"
         "                                    highlighted: view.viceKeyCaptureIndex === view.viceKeyRows.indexOf(modelData)\n"
-        "                                    onClicked: { view.viceKeyCaptureIndex = view.viceKeyRows.indexOf(modelData); viceKeyOverlay.forceActiveFocus(); view.viceKeyNotice = \"Waiting for key…\"; }\n"
+        "                                    onClicked: { view.viceKeyCaptureIndex = view.viceKeyRows.indexOf(modelData); viceKeyOverlay.forceActiveFocus(); view.viceKeyNotice = view.vt(\"En attente d’une touche…\", \"Waiting for key…\"); }\n"
         "                                }\n"
         "                            }\n"
         "                        }\n"
@@ -1505,7 +1505,7 @@ bool StreamSession::HandleMouseWheelEvent(QWheelEvent *event)
         "                        delegate: ColumnLayout {\n"
         "                            Layout.fillWidth: true\n"
         "                            Label { text: modelData.label; color: \"#cbd5df\" }\n"
-        "                            Button { text: view.viceKeyMouseCaptureIndex === index ? \"Press mouse…\" : modelData.display; onClicked: { view.viceKeyMouseCaptureIndex = index; viceKeyOverlay.forceActiveFocus(); view.viceKeyNotice = \"Waiting for mouse button…\"; } }\n"
+        "                            Button { text: view.viceKeyMouseCaptureIndex === index ? view.vt(\"Cliquez sur un bouton…\", \"Press mouse…\") : modelData.display; onClicked: { view.viceKeyMouseCaptureIndex = index; viceKeyOverlay.forceActiveFocus(); view.viceKeyNotice = view.vt(\"En attente du bouton de souris…\", \"Waiting for mouse button…\"); } }\n"
         "                        }\n"
         "                    }\n"
         "                }\n"
@@ -1513,7 +1513,7 @@ bool StreamSession::HandleMouseWheelEvent(QWheelEvent *event)
         "                RowLayout {\n"
         "                    visible: view.viceKeyActiveTab === 2\n"
         "                    Layout.fillWidth: true\n"
-        "                    Label { text: \"Camera\"; color: \"#cbd5df\"; Layout.preferredWidth: 110 }\n"
+        "                    Label { text: view.vt(\"Caméra\", \"Camera\"); color: \"#cbd5df\"; Layout.preferredWidth: 110 }\n"
         "                    Slider { Layout.fillWidth: true; from: 0.01; to: 100.0; stepSize: 0.05; value: Chiaki.settings.viceKeySensitivity; onMoved: { Chiaki.settings.viceKeySensitivity = value; if (Chiaki.session) Chiaki.session.setViceKeySensitivity(value); } }\n"
         "                    Label { text: Number(Chiaki.settings.viceKeySensitivity).toFixed(2); color: \"#f2f4f7\"; Layout.preferredWidth: 48 }\n"
         "                }\n"
