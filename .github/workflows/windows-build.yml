@@ -11,6 +11,10 @@ on:
       - 'build-vickey.sh'
       - '.github/workflows/windows-build.yml'
 
+concurrency:
+  group: vickey-windows-${{ github.ref }}
+  cancel-in-progress: true
+
 permissions:
   contents: write
 
@@ -38,7 +42,15 @@ jobs:
         shell: pwsh
         run: ./build-vickey.ps1
 
+      - name: Check that this is still the latest branch commit
+        id: latest
+        shell: pwsh
+        run: |
+          $latest = (git ls-remote origin refs/heads/feature/three-tab-controls).Split()[0]
+          "is_latest=$($latest -eq $env:GITHUB_SHA)" >> $env:GITHUB_OUTPUT
+
       - name: Publish Windows ZIP to GitHub Releases
+        if: steps.latest.outputs.is_latest == 'True'
         uses: softprops/action-gh-release@v3
         with:
           tag_name: v0.1.0-preview.5
