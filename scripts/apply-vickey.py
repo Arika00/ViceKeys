@@ -1194,6 +1194,7 @@ bool StreamSession::HandleMouseWheelEvent(QWheelEvent *event)
     property bool viceKeyHotkeyCapture: false
     property int viceKeyMappingRevision: 0
     property var viceKeyDropTargets: []
+    property var viceKeyMouseDropTargets: []
     property bool viceKeyDragActive: false
     property string viceKeyPendingAction: ""
     property point viceKeyDragPoint: Qt.point(-10000, -10000)
@@ -1210,6 +1211,21 @@ bool StreamSession::HandleMouseWheelEvent(QWheelEvent *event)
         if (index >= 0) {
             targets.splice(index, 1);
             viceKeyDropTargets = targets;
+        }
+    }
+    function viceKeyRegisterMouseDropTarget(target) {
+        var targets = viceKeyMouseDropTargets.slice(0);
+        if (targets.indexOf(target) < 0) {
+            targets.push(target);
+            viceKeyMouseDropTargets = targets;
+        }
+    }
+    function viceKeyUnregisterMouseDropTarget(target) {
+        var targets = viceKeyMouseDropTargets.slice(0);
+        var index = targets.indexOf(target);
+        if (index >= 0) {
+            targets.splice(index, 1);
+            viceKeyMouseDropTargets = targets;
         }
     }
     function viceKeyIsDropTarget(target) {
@@ -1234,7 +1250,19 @@ bool StreamSession::HandleMouseWheelEvent(QWheelEvent *event)
                 return true;
             }
         }
-        viceKeyNotice = vt("Dépose le bouton directement sur une touche du clavier.", "Drop the button directly onto a keyboard key.");
+        for (var j = 0; j < viceKeyMouseDropTargets.length; ++j) {
+            var mouseTarget = viceKeyMouseDropTargets[j];
+            if (!mouseTarget || !mouseTarget.visible) continue;
+            var mousePoint = mouseTarget.mapToItem(viceKeyOverlay, 0, 0);
+            if (x >= mousePoint.x && x <= mousePoint.x + mouseTarget.width
+                    && y >= mousePoint.y && y <= mousePoint.y + mouseTarget.height) {
+                Chiaki.session.setViceKeyMouseInput(mouseTarget.inputCode, actionId);
+                viceKeyMappingRevision++;
+                viceKeyNotice = mouseTarget.inputName + " ← " + viceKeyActionLabel(actionId);
+                return true;
+            }
+        }
+        viceKeyNotice = vt("Dépose le bouton sur une touche du clavier ou une zone souris.", "Drop the button onto a keyboard key or mouse input.");
         return false;
     }
     property var viceKeyRows: [
@@ -1698,11 +1726,13 @@ bool StreamSession::HandleMouseWheelEvent(QWheelEvent *event)
                 property int inputCode: modelData.input
                 property string inputName: modelData.label
                 property string mappedAction: { var revision = view.viceKeyMappingRevision; return Chiaki.session ? Chiaki.session.viceKeyActionForMouseInput(inputCode) : "none"; }
+                Component.onCompleted: view.viceKeyRegisterMouseDropTarget(mouseDropTarget)
+                Component.onDestruction: view.viceKeyUnregisterMouseDropTarget(mouseDropTarget)
                 width: Math.max(132, Math.min(190, parent.width / 3 - 12))
                 height: 66
                 radius: 12
-                color: mouseDropArea.containsDrag ? "#20384a" : "#202630"
-                border.color: mouseDropArea.containsDrag ? "#36b8ff" : "#36414e"
+                color: view.viceKeyIsDropTarget(mouseDropTarget) ? "#20384a" : "#202630"
+                border.color: view.viceKeyIsDropTarget(mouseDropTarget) ? "#36b8ff" : "#36414e"
                 Column {
                     anchors.centerIn: parent
                     spacing: 5
@@ -1710,16 +1740,16 @@ bool StreamSession::HandleMouseWheelEvent(QWheelEvent *event)
                     Text { text: view.viceKeyActionLabel(mouseDropTarget.mappedAction); visible: mouseDropTarget.mappedAction !== "none" && mouseDropTarget.mappedAction !== ""; color: "#8fcfff"; font.pixelSize: 10; anchors.horizontalCenter: parent.horizontalCenter }
                     Text { text: view.vt("Glisser pour affecter", "Drop to assign"); visible: mouseDropTarget.mappedAction === "none" || mouseDropTarget.mappedAction === ""; color: "#748397"; font.pixelSize: 9; anchors.horizontalCenter: parent.horizontalCenter }
                 }
-                DropArea {
-                    id: mouseDropArea
+                MouseArea {
                     anchors.fill: parent
-                    keys: ["vickey-button"]
-                    onDropped: function(drop) {
-                        if (!drop.source || !drop.source.actionId || !Chiaki.session) return;
-                        Chiaki.session.setViceKeyMouseInput(mouseDropTarget.inputCode, drop.source.actionId);
-                        view.viceKeyMappingRevision++;
-                        view.viceKeyNotice = mouseDropTarget.inputName + " ← " + view.viceKeyActionLabel(drop.source.actionId);
-                        drop.acceptProposedAction();
+                    acceptedButtons: Qt.LeftButton
+                    onClicked: {
+                        if (view.viceKeyPendingAction !== "" && Chiaki.session) {
+                            Chiaki.session.setViceKeyMouseInput(mouseDropTarget.inputCode, view.viceKeyPendingAction);
+                            view.viceKeyMappingRevision++;
+                            view.viceKeyNotice = mouseDropTarget.inputName + " ← " + view.viceKeyActionLabel(view.viceKeyPendingAction);
+                            view.viceKeyPendingAction = "";
+                        }
                     }
                 }
             }
