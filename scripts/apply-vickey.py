@@ -1193,6 +1193,50 @@ bool StreamSession::HandleMouseWheelEvent(QWheelEvent *event)
     function vt(fr, en) { return viceKeyLanguage === "EN" ? en : fr; }
     property bool viceKeyHotkeyCapture: false
     property int viceKeyMappingRevision: 0
+    property var viceKeyDropTargets: []
+    property bool viceKeyDragActive: false
+    property string viceKeyPendingAction: ""
+    property point viceKeyDragPoint: Qt.point(-10000, -10000)
+    function viceKeyRegisterDropTarget(target) {
+        var targets = viceKeyDropTargets.slice(0);
+        if (targets.indexOf(target) < 0) {
+            targets.push(target);
+            viceKeyDropTargets = targets;
+        }
+    }
+    function viceKeyUnregisterDropTarget(target) {
+        var targets = viceKeyDropTargets.slice(0);
+        var index = targets.indexOf(target);
+        if (index >= 0) {
+            targets.splice(index, 1);
+            viceKeyDropTargets = targets;
+        }
+    }
+    function viceKeyIsDropTarget(target) {
+        if (!viceKeyDragActive || !target || !target.visible) return false;
+        var p = target.mapToItem(viceKeyOverlay, 0, 0);
+        return viceKeyDragPoint.x >= p.x && viceKeyDragPoint.x <= p.x + target.width
+            && viceKeyDragPoint.y >= p.y && viceKeyDragPoint.y <= p.y + target.height;
+    }
+    function viceKeyAssignDraggedButton(actionId, x, y) {
+        if (!Chiaki.session || !actionId) {
+            viceKeyNotice = vt("Aucune session active pour affecter cette touche.", "No active session to assign this key.");
+            return false;
+        }
+        for (var i = 0; i < viceKeyDropTargets.length; ++i) {
+            var target = viceKeyDropTargets[i];
+            if (!target || !target.visible) continue;
+            var p = target.mapToItem(viceKeyOverlay, 0, 0);
+            if (x >= p.x && x <= p.x + target.width && y >= p.y && y <= p.y + target.height) {
+                Chiaki.session.setViceKeyButton(target.keyCode, actionId);
+                viceKeyMappingRevision++;
+                viceKeyNotice = target.keyLabel + " ← " + viceKeyActionLabel(actionId);
+                return true;
+            }
+        }
+        viceKeyNotice = vt("Dépose le bouton directement sur une touche du clavier.", "Drop the button directly onto a keyboard key.");
+        return false;
+    }
     property var viceKeyRows: [
         { label: view.vt("Avancer", "Move forward"), action: "left_y_up", key: Qt.Key_Z, display: "Z" },
         { label: view.vt("Gauche", "Move left"), action: "left_x_down", key: Qt.Key_Q, display: "Q" },
@@ -1256,9 +1300,9 @@ bool StreamSession::HandleMouseWheelEvent(QWheelEvent *event)
     }
     function viceKeyActionColor(action) {
         var colors = {
-            cross: "#2478ef", cover: "#2478ef",
+            cross: "#2478ef",
             circle: "#df3c43", square: "#d7a51e", triangle: "#239e61",
-            l1: "#28557c", l2: "#28557c", r1: "#743941", r2: "#743941",
+            l1: "#28557c", l2: "#28557c", r1: "#743941", r2: "#743941", cover: "#743941",
             l3: "#7651a8", r3: "#a36b32", focus: "#555d70",
             dpad_up: "#287b78", dpad_down: "#287b78", dpad_left: "#287b78", dpad_right: "#287b78",
             touchpad: "#247c9e", options: "#596579",
@@ -1269,9 +1313,9 @@ bool StreamSession::HandleMouseWheelEvent(QWheelEvent *event)
     }
     function viceKeyActionBorderColor(action) {
         var colors = {
-            cross: "#69aaff", cover: "#69aaff",
+            cross: "#69aaff",
             circle: "#ff848a", square: "#f2d06e", triangle: "#69d69b",
-            l1: "#5d91bd", l2: "#5d91bd", r1: "#ba6870", r2: "#ba6870",
+            l1: "#5d91bd", l2: "#5d91bd", r1: "#ba6870", r2: "#ba6870", cover: "#ba6870",
             l3: "#b18cdd", r3: "#d5a06b", focus: "#9aa4b7",
             dpad_up: "#69c8c1", dpad_down: "#69c8c1", dpad_left: "#69c8c1", dpad_right: "#69c8c1",
             touchpad: "#64c7e9", options: "#a0adbf",
@@ -1308,11 +1352,19 @@ bool StreamSession::HandleMouseWheelEvent(QWheelEvent *event)
         return "Key " + key;
     }
     function viceKeySyncDisplay() {
-        viceKeyKeyboardRows = viceKeyBuildKeyboardRows(Chiaki.settings.viceKeyLayout);
+        var layout = Chiaki.settings.viceKeyLayout;
+        viceKeyKeyboardRows = viceKeyBuildKeyboardRows(layout);
+        if (Chiaki.session) {
+            Chiaki.session.setViceKeyLayout(layout);
+            viceKeyMappingRevision++;
+        }
     }
     function viceKeySetLayout(layout) {
         Chiaki.settings.viceKeyLayout = layout;
-        if (Chiaki.session) Chiaki.session.setViceKeyLayout(layout);
+        if (Chiaki.session) {
+            Chiaki.session.setViceKeyLayout(layout);
+            viceKeyMappingRevision++;
+        }
         viceKeyKeyboardRows = viceKeyBuildKeyboardRows(layout);
         viceKeyNotice = "Keyboard layout: " + layout;
     }
@@ -1479,12 +1531,14 @@ bool StreamSession::HandleMouseWheelEvent(QWheelEvent *event)
                                             property int keyCode: modelData.key
                                             property string keyLabel: modelData.label
                                             property string mappedAction: { var revision = view.viceKeyMappingRevision; return Chiaki.session ? Chiaki.session.viceKeyActionForKey(keyCode) : "none"; }
+                                            Component.onCompleted: view.viceKeyRegisterDropTarget(physicalKey)
+                                            Component.onDestruction: view.viceKeyUnregisterDropTarget(physicalKey)
                                             width: modelData.width || 39
                                             height: 55
                                             radius: 10
-                                            color: physicalKeyDrop.containsDrag ? "#20384a" : view.viceKeyActionColor(mappedAction)
-                                            border.color: physicalKeyDrop.containsDrag ? "#36b8ff" : view.viceKeyActionBorderColor(mappedAction)
-                                            border.width: physicalKeyDrop.containsDrag ? 2 : (mappedAction === "none" ? 1 : 1.5)
+                                            color: view.viceKeyIsDropTarget(physicalKey) ? "#20384a" : view.viceKeyActionColor(mappedAction)
+                                            border.color: view.viceKeyIsDropTarget(physicalKey) ? "#36b8ff" : view.viceKeyActionBorderColor(mappedAction)
+                                            border.width: view.viceKeyIsDropTarget(physicalKey) ? 2 : (mappedAction === "none" ? 1 : 1.5)
                                             Column {
                                                 anchors.centerIn: parent
                                                 spacing: 3
@@ -1495,16 +1549,16 @@ bool StreamSession::HandleMouseWheelEvent(QWheelEvent *event)
                                                     color: "#ffffff"; font.pixelSize: 9; font.bold: true; anchors.horizontalCenter: parent.horizontalCenter
                                                 }
                                             }
-                                            DropArea {
-                                                id: physicalKeyDrop
+                                            MouseArea {
                                                 anchors.fill: parent
-                                                keys: ["vickey-button"]
-                                                onDropped: function(drop) {
-                                                    if (!drop.source || !drop.source.actionId || !Chiaki.session) return;
-                                                    Chiaki.session.setViceKeyButton(physicalKey.keyCode, drop.source.actionId);
-                                                    view.viceKeyMappingRevision++;
-                                                    view.viceKeyNotice = physicalKey.keyLabel + " ← " + view.viceKeyActionLabel(drop.source.actionId);
-                                                    drop.acceptProposedAction();
+                                                acceptedButtons: Qt.LeftButton
+                                                onClicked: {
+                                                    if (view.viceKeyPendingAction !== "" && Chiaki.session) {
+                                                        Chiaki.session.setViceKeyButton(physicalKey.keyCode, view.viceKeyPendingAction);
+                                                        view.viceKeyMappingRevision++;
+                                                        view.viceKeyNotice = physicalKey.keyLabel + " ← " + view.viceKeyActionLabel(view.viceKeyPendingAction);
+                                                        view.viceKeyPendingAction = "";
+                                                    }
                                                 }
                                             }
                                         }
@@ -1540,25 +1594,43 @@ bool StreamSession::HandleMouseWheelEvent(QWheelEvent *event)
                                     color: actionId === "cross" ? "#2478ef" : actionId === "circle" ? "#df3c43" : actionId === "triangle" ? "#239e61" : actionId === "square" ? "#d7a51e" : "#293340"
                                     border.color: actionId === "cross" ? "#69aaff" : actionId === "circle" ? "#ff848a" : actionId === "triangle" ? "#69d69b" : actionId === "square" ? "#f2d06e" : "#435163"
                                 }
-                                Drag.active: chipDragArea.drag.active
-                                Drag.source: controllerChip
-                                Drag.hotSpot.x: width / 2
-                                Drag.hotSpot.y: height / 2
-                                Drag.supportedActions: Qt.CopyAction
-                                Drag.keys: ["vickey-button"]
                                 Text { id: chipLabel; anchors.centerIn: parent; text: modelData.label; color: "#f0f4f8"; font.pixelSize: 11; font.bold: true }
                                 MouseArea {
                                     id: chipDragArea
                                     anchors.fill: parent
                                     acceptedButtons: Qt.LeftButton
                                     preventStealing: true
+                                    property bool didDrag: false
                                     drag.target: controllerChip
                                     drag.axis: Drag.XAndYAxis
                                     drag.threshold: 5
-                                    onReleased: Qt.callLater(function() {
-                                        controllerChip.x = 0;
-                                        controllerChip.y = 0;
-                                    })
+                                    onPressed: {
+                                        didDrag = false;
+                                        view.viceKeyPendingAction = controllerChip.actionId;
+                                    }
+                                    onPositionChanged: function(mouse) {
+                                        if (pressed && drag.active) {
+                                            didDrag = true;
+                                            var point = chipDragArea.mapToItem(viceKeyOverlay, mouse.x, mouse.y);
+                                            view.viceKeyDragPoint = Qt.point(point.x, point.y);
+                                            view.viceKeyDragActive = true;
+                                        }
+                                    }
+                                    onReleased: function(mouse) {
+                                        if (didDrag) {
+                                            var point = chipDragArea.mapToItem(viceKeyOverlay, mouse.x, mouse.y);
+                                            view.viceKeyAssignDraggedButton(controllerChip.actionId, point.x, point.y);
+                                        } else {
+                                            view.viceKeyNotice = view.vt("Bouton sélectionné : clique ensuite sur une touche.", "Button selected: click a key to assign it.");
+                                        }
+                                        view.viceKeyDragActive = false;
+                                        view.viceKeyPendingAction = didDrag ? "" : controllerChip.actionId;
+                                        didDrag = false;
+                                        Qt.callLater(function() {
+                                            controllerChip.x = 0;
+                                            controllerChip.y = 0;
+                                        });
+                                    }
                                 }
                             }
                         }
