@@ -53,8 +53,8 @@ jobs:
         if: steps.latest.outputs.is_latest == 'True'
         uses: softprops/action-gh-release@v3
         with:
-          tag_name: v0.1.0-preview.11
-          name: ViceKey 0.1.0 Preview 11 — Windows
+          tag_name: v0.1.0-preview.12
+          name: ViceKey 0.1.0 Preview 12 — Windows
           target_commitish: ${{ github.sha }}
           draft: false
           prerelease: false
