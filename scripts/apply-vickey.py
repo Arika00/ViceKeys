@@ -1129,8 +1129,8 @@ bool StreamSession::HandleMouseWheelEvent(QWheelEvent *event)
     ]
     property var viceKeyKeyboardRows: []
     property var viceKeyControllerButtons: [
-        { label: "✕ Croix", action: "cross" }, { label: "○ Rond", action: "circle" },
-        { label: "□ Carré", action: "square" }, { label: "△ Triangle", action: "triangle" },
+        { label: view.vt("✕ Croix", "✕ Cross"), action: "cross" }, { label: view.vt("○ Rond", "○ Circle"), action: "circle" },
+        { label: view.vt("□ Carré", "□ Square"), action: "square" }, { label: view.vt("△ Triangle", "△ Triangle"), action: "triangle" },
         { label: "L1", action: "l1" }, { label: "R1", action: "r1" },
         { label: "L2", action: "l2" }, { label: "R2", action: "r2" },
         { label: "L3", action: "l3" }, { label: "R3", action: "r3" },
@@ -1165,7 +1165,7 @@ bool StreamSession::HandleMouseWheelEvent(QWheelEvent *event)
         ];
     }
     function viceKeyActionLabel(action) {
-        var labels = { none: "—", cross: "✕ Croix", circle: "○ Rond", square: "□ Carré", triangle: "△ Triangle", l1: "L1", r1: "R1", l2: "L2", r2: "R2", l3: "L3", r3: "R3", focus: "L3 + R3", dpad_up: "D-Pad ↑", dpad_down: "D-Pad ↓", dpad_left: "D-Pad ←", dpad_right: "D-Pad →", touchpad: "Touchpad", options: "Options", left_y_up: "Stick G ↑", left_y_down: "Stick G ↓", left_x_down: "Stick G ←", left_x_up: "Stick G →" };
+        var labels = { none: "—", cross: view.vt("✕ Croix", "✕ Cross"), circle: view.vt("○ Rond", "○ Circle"), square: view.vt("□ Carré", "□ Square"), triangle: view.vt("△ Triangle", "△ Triangle"), l1: "L1", r1: "R1", l2: "L2", r2: "R2", l3: "L3", r3: "R3", focus: "L3 + R3", dpad_up: "D-Pad ↑", dpad_down: "D-Pad ↓", dpad_left: "D-Pad ←", dpad_right: "D-Pad →", touchpad: "Touchpad", options: "Options", left_y_up: "Stick G ↑", left_y_down: "Stick G ↓", left_x_down: "Stick G ←", left_x_up: "Stick G →" };
         return labels[action] || "—";
     }
     function viceKeyName(key) {
@@ -1297,7 +1297,7 @@ bool StreamSession::HandleMouseWheelEvent(QWheelEvent *event)
         "            anchors.centerIn: parent\n"
         "            width: Math.min(parent.width - 36, 1160)\n"
         "            height: Math.min(parent.height - 36, 780)\n"
-        "            radius: 12\n"
+        "            radius: 24\n"
         "            color: \"#f0191919\"\n"
         "            border.color: \"#303030\"\n"
         "            border.width: 1\n"
@@ -1308,9 +1308,9 @@ bool StreamSession::HandleMouseWheelEvent(QWheelEvent *event)
         "                RowLayout {\n"
         "                    Layout.fillWidth: true\n"
         "                    Label { text: \"VICEKEY\"; font.pixelSize: 22; font.bold: true; color: \"#f2f4f7\" }\n"
-        "                    Label { text: \"IN-GAME CONTROLS\"; color: \"#94a3b3\" }\n"
+        "                    Label { text: view.vt(\"COMMANDES EN JEU\", \"IN-GAME CONTROLS\"); color: \"#94a3b3\" }\n"
         "                    Item { Layout.fillWidth: true }\n"
-        "                    Button { text: \"Close  Esc\"; onClicked: viceKeyOverlay.visible = false }\n"
+        "                    Button { text: view.vt(\"Fermer  Esc\", \"Close  Esc\"); onClicked: viceKeyOverlay.visible = false }\n"
         "                }\n"
         "                TabBar {\n"
         "                    Layout.fillWidth: true\n"
@@ -1331,7 +1331,7 @@ bool StreamSession::HandleMouseWheelEvent(QWheelEvent *event)
                         clip: true
                         ColumnLayout {
                             width: parent.width
-                            Label { text: "CLAVIER " + Chiaki.settings.viceKeyLayout; color: "#e2e8f0"; font.bold: true }
+                            Label { text: view.vt("CLAVIER ", "KEYBOARD ") + Chiaki.settings.viceKeyLayout; color: "#e2e8f0"; font.bold: true }
                             Repeater {
                                 model: view.viceKeyKeyboardRows
                                 delegate: Flow {
@@ -1346,7 +1346,7 @@ bool StreamSession::HandleMouseWheelEvent(QWheelEvent *event)
                                             property string keyLabel: modelData.label
                                             width: modelData.width || 39
                                             height: 55
-                                            radius: 5
+                                            radius: 10
                                             color: "#292929"
                                             border.color: "#414141"
                                             border.width: 1
@@ -1379,7 +1379,7 @@ bool StreamSession::HandleMouseWheelEvent(QWheelEvent *event)
                     ColumnLayout {
                         Layout.preferredWidth: 230
                         Layout.fillHeight: true
-                        Label { text: "SOURIS"; color: "#e2e8f0"; font.bold: true }
+                        Label { text: view.vt("SOURIS", "MOUSE"); color: "#e2e8f0"; font.bold: true }
                         Repeater {
                             model: view.viceKeyMouseTargets
                             delegate: Rectangle {
@@ -1388,7 +1388,7 @@ bool StreamSession::HandleMouseWheelEvent(QWheelEvent *event)
                                 property string inputLabel: modelData.label
                                 Layout.fillWidth: true
                                 height: 49
-                                radius: 6
+                                radius: 10
                                 color: "#292929"
                                 border.color: "#414141"
                                 Column {
