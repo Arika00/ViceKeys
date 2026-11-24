@@ -1084,7 +1084,7 @@ bool StreamSession::HandleMouseWheelEvent(QWheelEvent *event)
         "mark ViceKey as an interactive overlay")
 
     insert_after(root / "gui/src/qml/StreamView.qml",
-        "    property bool sessionPinDialogActive: false\\n",
+        "    property bool sessionPinDialogActive: false\n",
         """    property int viceKeyCaptureIndex: -1
     property int viceKeyMouseCaptureIndex: -1
     property string viceKeyNotice: ""
