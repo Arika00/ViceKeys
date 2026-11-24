@@ -1147,6 +1147,7 @@ bool StreamSession::HandleMouseWheelEvent(QWheelEvent *event)
     property string viceKeyLanguage: Chiaki.settings.viceKeyLanguage
     function vt(fr, en) { return viceKeyLanguage === "EN" ? en : fr; }
     property bool viceKeyHotkeyCapture: false
+    property int viceKeyMappingRevision: 0
     property var viceKeyRows: [
         { label: view.vt("Avancer", "Move forward"), action: "left_y_up", key: Qt.Key_Z, display: "Z" },
         { label: view.vt("Gauche", "Move left"), action: "left_x_down", key: Qt.Key_Q, display: "Q" },
@@ -1417,7 +1418,7 @@ bool StreamSession::HandleMouseWheelEvent(QWheelEvent *event)
                                                 spacing: 3
                                                 Text { text: physicalKey.keyLabel; color: "#eef2f6"; font.bold: true; font.pixelSize: 12; anchors.horizontalCenter: parent.horizontalCenter }
                                                 Text {
-                                                    property string mappedAction: Chiaki.session ? Chiaki.session.viceKeyActionForKey(physicalKey.keyCode) : "none"
+                                                    property string mappedAction: { var revision = view.viceKeyMappingRevision; return Chiaki.session ? Chiaki.session.viceKeyActionForKey(physicalKey.keyCode) : "none"; }
                                                     text: view.viceKeyActionLabel(mappedAction)
                                                     visible: mappedAction !== "none" && mappedAction !== ""
                                                     color: "#8fcfff"; font.pixelSize: 9; anchors.horizontalCenter: parent.horizontalCenter
@@ -1430,6 +1431,7 @@ bool StreamSession::HandleMouseWheelEvent(QWheelEvent *event)
                                                 onDropped: function(drop) {
                                                     if (!drop.source || !drop.source.actionId || !Chiaki.session) return;
                                                     Chiaki.session.setViceKeyButton(physicalKey.keyCode, drop.source.actionId);
+                                                    view.viceKeyMappingRevision++;
                                                     view.viceKeyNotice = physicalKey.keyLabel + " ← " + view.viceKeyActionLabel(drop.source.actionId);
                                                     drop.acceptProposedAction();
                                                 }
@@ -1480,7 +1482,7 @@ bool StreamSession::HandleMouseWheelEvent(QWheelEvent *event)
         "                    Label { text: view.vt(\"Langue\", \"Language\"); color: \"#cbd5df\" }\n"
         "                    ComboBox { model: [\"Français\", \"English\"]; currentIndex: view.viceKeyLanguage === \"EN\" ? 1 : 0; onActivated: function(index) { Chiaki.settings.viceKeyLanguage = index === 1 ? \"EN\" : \"FR\"; view.viceKeyLanguage = Chiaki.settings.viceKeyLanguage; } }\n"
         "                    Button { text: view.vt(\"Exporter le profil…\", \"Export profile…\"); onClicked: { if (Chiaki.settings.exportViceKeyProfile()) view.viceKeyNotice = \"Profile exported\"; } }\n"
-        "                    Button { text: view.vt(\"Importer un profil…\", \"Import profile…\"); onClicked: { if (Chiaki.settings.importViceKeyProfile()) { if (Chiaki.session) { Chiaki.session.setViceKeyLayout(Chiaki.settings.viceKeyLayout); Chiaki.session.setViceKeySensitivity(Chiaki.settings.viceKeySensitivity); Chiaki.session.setViceKeyAimSensitivity(Chiaki.settings.viceKeyAimSensitivity); } view.viceKeySetLayout(Chiaki.settings.viceKeyLayout); view.viceKeyNotice = \"Profile imported\"; } } }\n"
+        "                    Button { text: view.vt(\"Importer un profil…\", \"Import profile…\"); onClicked: { if (Chiaki.settings.importViceKeyProfile()) { if (Chiaki.session) { Chiaki.session.setViceKeyLayout(Chiaki.settings.viceKeyLayout); Chiaki.session.setViceKeySensitivity(Chiaki.settings.viceKeySensitivity); Chiaki.session.setViceKeyAimSensitivity(Chiaki.settings.viceKeyAimSensitivity); } view.viceKeySetLayout(Chiaki.settings.viceKeyLayout); view.viceKeyMappingRevision++; view.viceKeyNotice = \"Profile imported\"; } } }\n"
         "                    Item { Layout.fillWidth: true }\n"
         "                }\n"
         "                RowLayout {\n"
@@ -1534,7 +1536,7 @@ bool StreamSession::HandleMouseWheelEvent(QWheelEvent *event)
                 id: mouseDropTarget
                 property int inputCode: modelData.input
                 property string inputName: modelData.label
-                property string mappedAction: Chiaki.session ? Chiaki.session.viceKeyActionForMouseInput(inputCode) : "none"
+                property string mappedAction: { var revision = view.viceKeyMappingRevision; return Chiaki.session ? Chiaki.session.viceKeyActionForMouseInput(inputCode) : "none"; }
                 width: Math.max(132, Math.min(190, parent.width / 3 - 12))
                 height: 66
                 radius: 12
@@ -1554,6 +1556,7 @@ bool StreamSession::HandleMouseWheelEvent(QWheelEvent *event)
                     onDropped: function(drop) {
                         if (!drop.source || !drop.source.actionId || !Chiaki.session) return;
                         Chiaki.session.setViceKeyMouseInput(mouseDropTarget.inputCode, drop.source.actionId);
+                        view.viceKeyMappingRevision++;
                         view.viceKeyNotice = mouseDropTarget.inputName + " ← " + view.viceKeyActionLabel(drop.source.actionId);
                         drop.acceptProposedAction();
                     }
