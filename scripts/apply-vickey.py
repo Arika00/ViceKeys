@@ -1285,7 +1285,6 @@ bool StreamSession::HandleMouseWheelEvent(QWheelEvent *event)
         "                    TabButton { text: \"Souris\" }\n"
         "                    TabButton { text: \"Clavier\" }\n"
         "                    TabButton { text: \"Réglages\" }\n"
-        "                }\n"        "                    TabButton { text: \"Réglages\" }\n"
         "                }\n"
         """                RowLayout {
                     visible: view.viceKeyActiveTab === 1
