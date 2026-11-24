@@ -96,6 +96,7 @@ def patch(root: Path) -> None:
     insert_after(qmlsettings_cpp,
         "#include <QProcess>\n",
         "#include <QFile>\n"
+        "#include <QFileDialog>\n"
         "#include <QJsonDocument>\n"
         "#include <QJsonObject>\n"
         "#include <QJsonParseError>\n",
@@ -174,7 +175,8 @@ def patch(root: Path) -> None:
     # Windows Raw Input: read hardware-relative deltas without cursor warping.
     insert_after(stream_cpp,
         "#include <QKeyEvent>\n",
-        """#include <cmath>
+        """#include <algorithm>
+#include <cmath>
 #include <QWheelEvent>
 #include <QAbstractNativeEventFilter>
 #include <QCoreApplication>
@@ -556,8 +558,6 @@ static ViceKeyRawInputFilter *g_viceKeyRawInputFilter = nullptr;
         "}\n"
     )
     replace_once(stream_cpp, old_keyboard, new_keyboard, "alias-safe keyboard input")
-
-    replace_once(stream_cpp, old_mouse, new_mouse, "mouse-to-right-stick input")
 
     # Keep Chiaki-ng global shortcuts intact; AZERTY Q is only interpreted during the stream.
     insert_after(mainwindow_cpp,
