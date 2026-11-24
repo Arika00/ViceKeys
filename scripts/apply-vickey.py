@@ -190,8 +190,12 @@ def patch(root: Path) -> None:
         "\t\tQTimer *vice_key_wheel_reset_timer = nullptr;\n"
         "\t\tqint64 vice_key_mouse_delta_x = 0;\n"
         "\t\tqint64 vice_key_mouse_delta_y = 0;\n"
-        "\t\tdouble vice_key_mouse_smooth_x = 0.0;\n"
-        "\t\tdouble vice_key_mouse_smooth_y = 0.0;\n"
+        "\t\tdouble vice_key_mouse_filtered_x = 0.0;\n"
+        "\t\tdouble vice_key_mouse_filtered_y = 0.0;\n"
+        "\t\tdouble vice_key_mouse_last_active_x = 0.0;\n"
+        "\t\tdouble vice_key_mouse_last_active_y = 0.0;\n"
+        "\t\tdouble vice_key_mouse_elapsed_since_sample_ms = 0.0;\n"
+        "\t\tdouble vice_key_mouse_idle_elapsed_ms = 0.0;\n"
         "\t\tQTimer *vice_key_mouse_reset_timer = nullptr;\n",
         "stream session members")
 
@@ -390,32 +394,54 @@ static ViceKeyRawInputFilter *g_viceKeyRawInputFilter = nullptr;
         "\t\tvice_key_mouse_delta_x = 0;\n"
         "\t\tvice_key_mouse_delta_y = 0;\n"
         "\t\tconst qint64 sampleMs = qMax<qint64>(1, vice_key_mouse_sample_clock.restart());\n"
+        "\t\tconst double elapsed = static_cast<double>(sampleMs);\n"
         "\t\tconst double aim = vice_key_mouse_aiming ? vice_key_aim_sensitivity : 1.0;\n"
         "\t\tif (!vice_key_mouse_capture_enabled) {\n"
-        "\t\t\tvice_key_mouse_smooth_x = 0.0; vice_key_mouse_smooth_y = 0.0;\n"
+        "\t\t\tvice_key_mouse_filtered_x = 0.0; vice_key_mouse_filtered_y = 0.0;\n"
+        "\t\t\tvice_key_mouse_last_active_x = 0.0; vice_key_mouse_last_active_y = 0.0;\n"
+        "\t\t\tvice_key_mouse_elapsed_since_sample_ms = 0.0; vice_key_mouse_idle_elapsed_ms = 0.0;\n"
         "\t\t\tif (keyboard_state.right_x || keyboard_state.right_y) { keyboard_state.right_x = 0; keyboard_state.right_y = 0; SendFeedbackState(); }\n"
         "\t\t\treturn;\n"
         "\t\t}\n"
-        "\t\tconst double intervalScale = std::clamp(4.0 / static_cast<double>(sampleMs), 0.25, 4.0);\n"
-        "\t\tconst double gain = vice_key_sensitivity * aim * 2200.0 * intervalScale;\n"
-        "\t\tauto shapeDelta = [gain](qint64 delta) -> int16_t {\n"
-        "\t\t\tif (delta == 0) return 0;\n"
-        "\t\t\tconst double normalized = std::clamp(std::abs(static_cast<double>(delta)) * gain / 32767.0, 0.0, 1.0);\n"
-        "\t\t\tconst double curved = std::pow(normalized, 0.72);\n"
-        "\t\t\tconst double signedValue = std::copysign(curved * 32767.0, static_cast<double>(delta));\n"
-        "\t\t\treturn static_cast<int16_t>(qBound(-32767, qRound(signedValue), 32767));\n"
-        "\t\t};\n"
-        "\t\tconst double attack = 1.0 - std::exp(-static_cast<double>(sampleMs) / 2.5);\n"
-        "\t\tconst double release = 1.0 - std::exp(-static_cast<double>(sampleMs) / 5.5);\n"
-        "\t\tauto filterAxis = [attack, release](double current, int16_t target) {\n"
-        "\t\t\tconst bool reversing = (current * static_cast<double>(target)) < 0.0;\n"
-        "\t\t\tconst double alpha = (std::abs(static_cast<double>(target)) > std::abs(current) || reversing) ? attack : release;\n"
-        "\t\t\treturn current + (static_cast<double>(target) - current) * alpha;\n"
-        "\t\t};\n"
-        "\t\tvice_key_mouse_smooth_x = filterAxis(vice_key_mouse_smooth_x, shapeDelta(dx));\n"
-        "\t\tvice_key_mouse_smooth_y = filterAxis(vice_key_mouse_smooth_y, shapeDelta(dy));\n"
-        "\t\tconst int16_t nextX = static_cast<int16_t>(qBound(-32767, qRound(vice_key_mouse_smooth_x), 32767));\n"
-        "\t\tconst int16_t nextY = static_cast<int16_t>(qBound(-32767, qRound(vice_key_mouse_smooth_y), 32767));\n"
+        "\t\tvice_key_mouse_elapsed_since_sample_ms = std::min(100.0, vice_key_mouse_elapsed_since_sample_ms + elapsed);\n"
+        "\t\tint16_t nextX = 0;\n"
+        "\t\tint16_t nextY = 0;\n"
+        "\t\tif (dx != 0 || dy != 0) {\n"
+        "\t\t\tconst double sampleElapsed = std::max(1.0, vice_key_mouse_elapsed_since_sample_ms);\n"
+        "\t\t\tconst double rawX = static_cast<double>(dx) * vice_key_sensitivity / sampleElapsed;\n"
+        "\t\t\tconst double rawY = static_cast<double>(dy) * vice_key_sensitivity * (vice_key_mouse_invert_y ? -1.0 : 1.0) / sampleElapsed;\n"
+        "\t\t\tconst double previousSpeed = std::hypot(vice_key_mouse_filtered_x, vice_key_mouse_filtered_y);\n"
+        "\t\t\tconst double directionDot = rawX * vice_key_mouse_filtered_x + rawY * vice_key_mouse_filtered_y;\n"
+        "\t\t\tif (previousSpeed <= 0.0001 || directionDot <= 0.0) {\n"
+        "\t\t\t\tvice_key_mouse_filtered_x = rawX; vice_key_mouse_filtered_y = rawY;\n"
+        "\t\t\t} else {\n"
+        "\t\t\t\tconst double alpha = 1.0 - std::exp(-sampleElapsed / 3.0);\n"
+        "\t\t\t\tvice_key_mouse_filtered_x += alpha * (rawX - vice_key_mouse_filtered_x);\n"
+        "\t\t\t\tvice_key_mouse_filtered_y += alpha * (rawY - vice_key_mouse_filtered_y);\n"
+        "\t\t\t}\n"
+        "\t\t\tconst double speed = std::hypot(vice_key_mouse_filtered_x, vice_key_mouse_filtered_y);\n"
+        "\t\t\tif (speed > 0.0001) {\n"
+        "\t\t\t\tconst double normalized = std::clamp(speed / 3.2, 0.0, 1.0);\n"
+        "\t\t\t\tconst double curved = std::pow(normalized, 1.35);\n"
+        "\t\t\t\tconst double maxOutput = vice_key_mouse_aiming ? 0.65 : 1.0;\n"
+        "\t\t\t\tconst double output = 0.12 + (maxOutput - 0.12) * curved;\n"
+        "\t\t\t\tnextX = static_cast<int16_t>(qBound(-32767, qRound(vice_key_mouse_filtered_x / speed * output * 32767.0), 32767));\n"
+        "\t\t\t\tnextY = static_cast<int16_t>(qBound(-32767, qRound(vice_key_mouse_filtered_y / speed * output * 32767.0), 32767));\n"
+        "\t\t\t}\n"
+        "\t\t\tvice_key_mouse_last_active_x = nextX; vice_key_mouse_last_active_y = nextY;\n"
+        "\t\t\tvice_key_mouse_elapsed_since_sample_ms = 0.0; vice_key_mouse_idle_elapsed_ms = 0.0;\n"
+        "\t\t} else {\n"
+        "\t\t\tvice_key_mouse_idle_elapsed_ms += elapsed;\n"
+        "\t\t\tconst double releaseProgress = std::clamp((vice_key_mouse_idle_elapsed_ms - 4.0) / 12.0, 0.0, 1.0);\n"
+        "\t\t\tconst double releaseScale = releaseProgress >= 1.0 ? 0.0 : std::cos(releaseProgress * 1.5707963267948966);\n"
+        "\t\t\tnextX = static_cast<int16_t>(qRound(vice_key_mouse_last_active_x * releaseScale));\n"
+        "\t\t\tnextY = static_cast<int16_t>(qRound(vice_key_mouse_last_active_y * releaseScale));\n"
+        "\t\t\tif (releaseProgress >= 1.0) {\n"
+        "\t\t\t\tvice_key_mouse_filtered_x = 0.0; vice_key_mouse_filtered_y = 0.0;\n"
+        "\t\t\t\tvice_key_mouse_last_active_x = 0.0; vice_key_mouse_last_active_y = 0.0;\n"
+        "\t\t\t\tvice_key_mouse_elapsed_since_sample_ms = 0.0; vice_key_mouse_idle_elapsed_ms = 0.0;\n"
+        "\t\t\t}\n"
+        "\t\t}\n"
         "\t\tif (keyboard_state.right_x != nextX || keyboard_state.right_y != nextY) {\n"
         "\t\t\tkeyboard_state.right_x = nextX;\n"
         "\t\t\tkeyboard_state.right_y = nextY;\n"
@@ -512,6 +538,9 @@ static ViceKeyRawInputFilter *g_viceKeyRawInputFilter = nullptr;
         "\tvice_key_mouse_delta_x = 0;\n"
         "\tvice_key_mouse_delta_y = 0;\n"
         "\tvice_key_mouse_aiming = false;\n"
+        "\tvice_key_mouse_filtered_x = 0.0; vice_key_mouse_filtered_y = 0.0;\n"
+        "\tvice_key_mouse_last_active_x = 0.0; vice_key_mouse_last_active_y = 0.0;\n"
+        "\tvice_key_mouse_elapsed_since_sample_ms = 0.0; vice_key_mouse_idle_elapsed_ms = 0.0;\n"
         "\tif (keyboard_state.right_x || keyboard_state.right_y) {\n"
         "\t\tkeyboard_state.right_x = 0;\n"
         "\t\tkeyboard_state.right_y = 0;\n"
@@ -1397,6 +1426,7 @@ bool StreamSession::HandleMouseWheelEvent(QWheelEvent *event)
                                             DropArea {
                                                 id: physicalKeyDrop
                                                 anchors.fill: parent
+                                                keys: ["vickey-button"]
                                                 onDropped: function(drop) {
                                                     if (!drop.source || !drop.source.actionId || !Chiaki.session) return;
                                                     Chiaki.session.setViceKeyButton(physicalKey.keyCode, drop.source.actionId);
@@ -1428,17 +1458,20 @@ bool StreamSession::HandleMouseWheelEvent(QWheelEvent *event)
                             radius: 7
                             color: actionId === "cross" ? "#2478ef" : actionId === "circle" ? "#df3c43" : actionId === "triangle" ? "#239e61" : actionId === "square" ? "#d7a51e" : "#293340"
                             border.color: actionId === "cross" ? "#69aaff" : actionId === "circle" ? "#ff848a" : actionId === "triangle" ? "#69d69b" : actionId === "square" ? "#f2d06e" : "#435163"
+                            Drag.active: chipDragArea.drag.active
                             Drag.source: controllerChip
                             Drag.hotSpot.x: width / 2
                             Drag.hotSpot.y: height / 2
                             Drag.supportedActions: Qt.CopyAction
                             Drag.keys: ["vickey-button"]
                             Text { id: chipLabel; anchors.centerIn: parent; text: modelData.label; color: "#f0f4f8"; font.pixelSize: 11; font.bold: true }
-                            DragHandler {
-                                id: chipDrag
-                                target: null
-                                dragThreshold: 4
-                                onActiveChanged: if (active) controllerChip.Drag.startDrag(Qt.CopyAction)
+                            MouseArea {
+                                id: chipDragArea
+                                anchors.fill: parent
+                                acceptedButtons: Qt.LeftButton
+                                drag.target: controllerChip
+                                drag.axis: Drag.XAndYAxis
+                                drag.threshold: 5
                             }
                         }
                     }
@@ -1520,6 +1553,7 @@ bool StreamSession::HandleMouseWheelEvent(QWheelEvent *event)
                 DropArea {
                     id: mouseDropArea
                     anchors.fill: parent
+                    keys: ["vickey-button"]
                     onDropped: function(drop) {
                         if (!drop.source || !drop.source.actionId || !Chiaki.session) return;
                         Chiaki.session.setViceKeyMouseInput(mouseDropTarget.inputCode, drop.source.actionId);
