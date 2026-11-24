@@ -1409,7 +1409,10 @@ bool StreamSession::HandleMouseWheelEvent(QWheelEvent *event)
 
     insert_after(root / "gui/src/qml/StreamView.qml",
         "        Chiaki.settings.viceKeyLayout = layout;\n"
-        "        if (Chiaki.session) Chiaki.session.setViceKeyLayout(layout);\n"
+        "        if (Chiaki.session) {\n"
+        "            Chiaki.session.setViceKeyLayout(layout);\n"
+        "            viceKeyMappingRevision++;\n"
+        "        }\n"
         "        viceKeyKeyboardRows = viceKeyBuildKeyboardRows(layout);\n"
         "        viceKeyNotice = \"Keyboard layout: \" + layout;\n"
         "    }\n",
