@@ -181,6 +181,7 @@ def patch(root: Path) -> None:
         "\t\tbool vice_key_mouse_invert_y = false;\n"
         "\t\tbool vice_key_mouse_initialized = false;\n"
         "\t\tbool vice_key_tab_down = false;\n"
+        "\t\tbool vice_key_map_mode = false;\n"
         "\t\tbool vice_key_wheel_l2_down = false;\n"
         "\t\tbool vice_key_wheel_r2_down = false;\n"
         "\t\tuint32_t vice_key_wheel_button_mask = 0;\n"
@@ -358,6 +359,14 @@ static ViceKeyRawInputFilter *g_viceKeyRawInputFilter = nullptr;
         "\tkey_map.insert(Qt::Key_Left, CHIAKI_CONTROLLER_BUTTON_DPAD_LEFT);\n"
         "\tkey_map.insert(Qt::Key_Right, CHIAKI_CONTROLLER_BUTTON_DPAD_RIGHT);\n"
         "\tkey_map.insert(Qt::Key_Comma, CHIAKI_CONTROLLER_BUTTON_TOUCHPAD);\n"
+        "\tkey_map.insert(Qt::Key_1, CHIAKI_CONTROLLER_ANALOG_BUTTON_L2);\n"
+        "\tkey_map.insert(Qt::Key_2, CHIAKI_CONTROLLER_BUTTON_L1);\n"
+        "\tkey_map.insert(Qt::Key_3, CHIAKI_CONTROLLER_BUTTON_R1);\n"
+        "\tkey_map.insert(Qt::Key_4, CHIAKI_CONTROLLER_ANALOG_BUTTON_R2);\n"
+        "\tkey_map.insert(Qt::Key_5, CHIAKI_CONTROLLER_BUTTON_L3);\n"
+        "\tkey_map.insert(Qt::Key_6, CHIAKI_CONTROLLER_BUTTON_R3);\n"
+        "\tkey_map.insert(Qt::Key_Control, CHIAKI_CONTROLLER_BUTTON_L3);\n"
+        "\tkey_map.insert(vickey_qwerty ? Qt::Key_G : Qt::Key_A, CHIAKI_CONTROLLER_BUTTON_CROSS);\n"
         "\tkey_map.insert(Qt::Key_Escape, CHIAKI_CONTROLLER_BUTTON_OPTIONS);\n"
         "\tkey_map.insert(Qt::Key_CapsLock, CHIAKI_CONTROLLER_BUTTON_L3 | CHIAKI_CONTROLLER_BUTTON_R3);\n"
     )
@@ -616,6 +625,7 @@ static ViceKeyRawInputFilter *g_viceKeyRawInputFilter = nullptr;
         "\tif (pressed) {\n"
         "\t\tauto it = key_map.find(static_cast<Qt::Key>(key));\n"
         "\t\tif (it == key_map.end()) return;\n"
+        "\t\tif (it.value() == CHIAKI_CONTROLLER_BUTTON_TOUCHPAD) vice_key_map_mode = !vice_key_map_mode;\n"
         "\t\tvice_key_pressed_keys.insert(key, it.value());\n"
         "\t} else {\n"
         "\t\tif (!vice_key_pressed_keys.contains(key)) return;\n"
@@ -816,7 +826,8 @@ static ViceKeyRawInputFilter *g_viceKeyRawInputFilter = nullptr;
         "\telse if (action == \"left_y_down\") button = static_cast<int>(ControllerButtonExt::ANALOG_STICK_LEFT_Y_DOWN);\n"
         "\telse if (action == \"left_x_up\") button = static_cast<int>(ControllerButtonExt::ANALOG_STICK_LEFT_X_UP);\n"
         "\telse if (action == \"left_x_down\") button = static_cast<int>(ControllerButtonExt::ANALOG_STICK_LEFT_X_DOWN);\n"
-        "\telse if (action == \"cross\") button = CHIAKI_CONTROLLER_BUTTON_CROSS;\n"
+        "\telse if (action == \"cross\" || action == \"cover\") button = CHIAKI_CONTROLLER_BUTTON_CROSS;\n"
+        "\telse if (action == \"crouch\") button = CHIAKI_CONTROLLER_BUTTON_L3;\n"
         "\telse if (action == \"circle\") button = CHIAKI_CONTROLLER_BUTTON_MOON;\n"
         "\telse if (action == \"square\") button = CHIAKI_CONTROLLER_BUTTON_BOX;\n"
         "\telse if (action == \"triangle\") button = CHIAKI_CONTROLLER_BUTTON_PYRAMID;\n"
@@ -842,7 +853,8 @@ static ViceKeyRawInputFilter *g_viceKeyRawInputFilter = nullptr;
     if (action == "left_y_down") return static_cast<int>(ControllerButtonExt::ANALOG_STICK_LEFT_Y_DOWN);
     if (action == "left_x_up") return static_cast<int>(ControllerButtonExt::ANALOG_STICK_LEFT_X_UP);
     if (action == "left_x_down") return static_cast<int>(ControllerButtonExt::ANALOG_STICK_LEFT_X_DOWN);
-    if (action == "cross") return CHIAKI_CONTROLLER_BUTTON_CROSS;
+    if (action == "cross" || action == "cover") return CHIAKI_CONTROLLER_BUTTON_CROSS;
+    if (action == "crouch") return CHIAKI_CONTROLLER_BUTTON_L3;
     if (action == "circle") return CHIAKI_CONTROLLER_BUTTON_MOON;
     if (action == "square") return CHIAKI_CONTROLLER_BUTTON_BOX;
     if (action == "triangle") return CHIAKI_CONTROLLER_BUTTON_PYRAMID;
@@ -899,7 +911,14 @@ void StreamSession::setViceKeyButton(int key, const QString &action)
 
 QString StreamSession::viceKeyActionForKey(int key) const
 {
-    return ViceKeyActionName(key_map.value(static_cast<Qt::Key>(key), 0));
+    const int value = key_map.value(static_cast<Qt::Key>(key), 0);
+    if (key == Qt::Key_Control && value == CHIAKI_CONTROLLER_BUTTON_L3)
+        return QStringLiteral("crouch");
+    const bool qwerty = vice_key_settings && vice_key_settings->GetViceKeyLayout().compare("QWERTY", Qt::CaseInsensitive) == 0;
+    const int coverKey = qwerty ? Qt::Key_G : Qt::Key_A;
+    if (key == coverKey && value == CHIAKI_CONTROLLER_BUTTON_CROSS)
+        return QStringLiteral("cover");
+    return ViceKeyActionName(value);
 }
 
 void StreamSession::setViceKeyMouseInput(int input, const QString &action)
@@ -939,7 +958,12 @@ void StreamSession::RefreshViceKeyInputState()
         if (value == static_cast<int>(ControllerButtonExt::ANALOG_STICK_LEFT_X_UP)) { leftRight = true; return; }
         buttons |= static_cast<uint32_t>(value);
     };
-    for (auto it = vice_key_pressed_keys.cbegin(); it != vice_key_pressed_keys.cend(); ++it) apply(it.value());
+    for (auto it = vice_key_pressed_keys.cbegin(); it != vice_key_pressed_keys.cend(); ++it) {
+        int value = it.value();
+        if (vice_key_map_mode && it.key() == Qt::Key_A) value = CHIAKI_CONTROLLER_BUTTON_L1;
+        else if (vice_key_map_mode && it.key() == Qt::Key_E) value = CHIAKI_CONTROLLER_BUTTON_R1;
+        apply(value);
+    }
     for (auto it = vice_key_pressed_mouse_buttons.cbegin(); it != vice_key_pressed_mouse_buttons.cend(); ++it) apply(it.value());
     keyboard_state.buttons = buttons;
     keyboard_state.l2_state = l2 ? 0xff : 0;
@@ -986,6 +1010,14 @@ bool StreamSession::HandleMouseWheelEvent(QWheelEvent *event)
         "\tkey_map.insert(Qt::Key_Left, CHIAKI_CONTROLLER_BUTTON_DPAD_LEFT);\n"
         "\tkey_map.insert(Qt::Key_Right, CHIAKI_CONTROLLER_BUTTON_DPAD_RIGHT);\n"
         "\tkey_map.insert(Qt::Key_Comma, CHIAKI_CONTROLLER_BUTTON_TOUCHPAD);\n"
+        "\tkey_map.insert(Qt::Key_1, CHIAKI_CONTROLLER_ANALOG_BUTTON_L2);\n"
+        "\tkey_map.insert(Qt::Key_2, CHIAKI_CONTROLLER_BUTTON_L1);\n"
+        "\tkey_map.insert(Qt::Key_3, CHIAKI_CONTROLLER_BUTTON_R1);\n"
+        "\tkey_map.insert(Qt::Key_4, CHIAKI_CONTROLLER_ANALOG_BUTTON_R2);\n"
+        "\tkey_map.insert(Qt::Key_5, CHIAKI_CONTROLLER_BUTTON_L3);\n"
+        "\tkey_map.insert(Qt::Key_6, CHIAKI_CONTROLLER_BUTTON_R3);\n"
+        "\tkey_map.insert(Qt::Key_Control, CHIAKI_CONTROLLER_BUTTON_L3);\n"
+        "\tkey_map.insert(qwerty ? Qt::Key_G : Qt::Key_A, CHIAKI_CONTROLLER_BUTTON_CROSS);\n"
         "\tkey_map.insert(Qt::Key_Escape, CHIAKI_CONTROLLER_BUTTON_OPTIONS);\n"
         "\tkey_map.insert(Qt::Key_CapsLock, CHIAKI_CONTROLLER_BUTTON_L3 | CHIAKI_CONTROLLER_BUTTON_R3);\n"
         "\tif (vice_key_settings) {\n"
@@ -1031,7 +1063,8 @@ bool StreamSession::HandleMouseWheelEvent(QWheelEvent *event)
         "\telse if (action == \"left_y_down\") value = static_cast<int>(ControllerButtonExt::ANALOG_STICK_LEFT_Y_DOWN);\n"
         "\telse if (action == \"left_x_up\") value = static_cast<int>(ControllerButtonExt::ANALOG_STICK_LEFT_X_UP);\n"
         "\telse if (action == \"left_x_down\") value = static_cast<int>(ControllerButtonExt::ANALOG_STICK_LEFT_X_DOWN);\n"
-        "\telse if (action == \"cross\") value = CHIAKI_CONTROLLER_BUTTON_CROSS;\n"
+        "\telse if (action == \"cross\" || action == \"cover\") value = CHIAKI_CONTROLLER_BUTTON_CROSS;\n"
+        "\telse if (action == \"crouch\") value = CHIAKI_CONTROLLER_BUTTON_L3;\n"
         "\telse if (action == \"circle\") value = CHIAKI_CONTROLLER_BUTTON_MOON;\n"
         "\telse if (action == \"square\") value = CHIAKI_CONTROLLER_BUTTON_BOX;\n"
         "\telse if (action == \"triangle\") value = CHIAKI_CONTROLLER_BUTTON_PYRAMID;\n"
@@ -1066,6 +1099,14 @@ bool StreamSession::HandleMouseWheelEvent(QWheelEvent *event)
         "\tprofile.insert(Qt::Key_Left, CHIAKI_CONTROLLER_BUTTON_DPAD_LEFT);\n"
         "\tprofile.insert(Qt::Key_Right, CHIAKI_CONTROLLER_BUTTON_DPAD_RIGHT);\n"
         "\tprofile.insert(Qt::Key_Comma, CHIAKI_CONTROLLER_BUTTON_TOUCHPAD);\n"
+        "\tprofile.insert(Qt::Key_1, CHIAKI_CONTROLLER_ANALOG_BUTTON_L2);\n"
+        "\tprofile.insert(Qt::Key_2, CHIAKI_CONTROLLER_BUTTON_L1);\n"
+        "\tprofile.insert(Qt::Key_3, CHIAKI_CONTROLLER_BUTTON_R1);\n"
+        "\tprofile.insert(Qt::Key_4, CHIAKI_CONTROLLER_ANALOG_BUTTON_R2);\n"
+        "\tprofile.insert(Qt::Key_5, CHIAKI_CONTROLLER_BUTTON_L3);\n"
+        "\tprofile.insert(Qt::Key_6, CHIAKI_CONTROLLER_BUTTON_R3);\n"
+        "\tprofile.insert(Qt::Key_Control, CHIAKI_CONTROLLER_BUTTON_L3);\n"
+        "\tprofile.insert(qwerty ? Qt::Key_G : Qt::Key_A, CHIAKI_CONTROLLER_BUTTON_CROSS);\n"
         "\tprofile.insert(Qt::Key_Escape, CHIAKI_CONTROLLER_BUTTON_OPTIONS);\n"
         "\tprofile.insert(Qt::Key_CapsLock, CHIAKI_CONTROLLER_BUTTON_L3 | CHIAKI_CONTROLLER_BUTTON_R3);\n"
         "\tif (vice_key_settings) { const auto overrides = vice_key_settings->GetViceKeyMappings(); for (auto it = overrides.cbegin(); it != overrides.cend(); ++it) { if (it.value() <= 0) profile.remove(it.key()); else profile.insert(it.key(), it.value()); } }\n"
@@ -1100,6 +1141,7 @@ bool StreamSession::HandleMouseWheelEvent(QWheelEvent *event)
         "\tvice_key_mouse_aiming = false;\n"
         "\tvice_key_mouse_initialized = false;\n"
         "\tvice_key_tab_down = false;\n"
+        "\tvice_key_map_mode = false;\n"
         "\tvice_key_wheel_l2_down = false; vice_key_wheel_r2_down = false; vice_key_wheel_button_mask = 0;\n"
         "\tvice_key_pressed_keys.clear(); vice_key_pressed_mouse_buttons.clear();\n"
         "\tif (vice_key_wheel_reset_timer) vice_key_wheel_reset_timer->stop();\n"
@@ -1206,7 +1248,7 @@ bool StreamSession::HandleMouseWheelEvent(QWheelEvent *event)
         ];
     }
     function viceKeyActionLabel(action) {
-        var labels = { none: "", cross: view.vt("✕ Croix", "✕ Cross"), circle: view.vt("○ Rond", "○ Circle"), square: view.vt("□ Carré", "□ Square"), triangle: view.vt("△ Triangle", "△ Triangle"), l1: "L1", r1: "R1", l2: "L2", r2: "R2", l3: "L3", r3: "R3", focus: "L3 + R3", dpad_up: "D-Pad ↑", dpad_down: "D-Pad ↓", dpad_left: "D-Pad ←", dpad_right: "D-Pad →", touchpad: "Touchpad", options: "Options", left_y_up: "Stick G ↑", left_y_down: "Stick G ↓", left_x_down: "Stick G ←", left_x_up: "Stick G →" };
+        var labels = { none: "", cover: view.vt("Se mettre à couvert", "Take cover"), crouch: view.vt("S’accroupir", "Crouch"), cross: view.vt("✕ Croix", "✕ Cross"), circle: view.vt("○ Rond", "○ Circle"), square: view.vt("□ Carré", "□ Square"), triangle: view.vt("△ Triangle", "△ Triangle"), l1: "L1", r1: "R1", l2: "L2", r2: "R2", l3: "L3", r3: "R3", focus: "L3 + R3", dpad_up: "D-Pad ↑", dpad_down: "D-Pad ↓", dpad_left: "D-Pad ←", dpad_right: "D-Pad →", touchpad: "Touchpad", options: "Options", left_y_up: "Stick G ↑", left_y_down: "Stick G ↓", left_x_down: "Stick G ←", left_x_up: "Stick G →" };
         return labels[action] || "—";
     }
     function viceKeyName(key) {
@@ -1452,25 +1494,41 @@ bool StreamSession::HandleMouseWheelEvent(QWheelEvent *event)
                     spacing: 7
                     Repeater {
                         model: view.viceKeyControllerButtons
-                        delegate: Rectangle {
-                            id: controllerChip
-                            property string actionId: modelData.action
+                        delegate: Item {
+                            id: controllerChipSlot
                             width: Math.max(64, chipLabel.implicitWidth + 22)
-                            height: 34
-                            radius: 7
-                            color: actionId === "cross" ? "#2478ef" : actionId === "circle" ? "#df3c43" : actionId === "triangle" ? "#239e61" : actionId === "square" ? "#d7a51e" : "#293340"
-                            border.color: actionId === "cross" ? "#69aaff" : actionId === "circle" ? "#ff848a" : actionId === "triangle" ? "#69d69b" : actionId === "square" ? "#f2d06e" : "#435163"
-                            Drag.active: chipDrag.active
-                            Drag.source: controllerChip
-                            Drag.hotSpot.x: width / 2
-                            Drag.hotSpot.y: height / 2
-                            Drag.supportedActions: Qt.CopyAction
-                            Drag.keys: ["vickey-button"]
-                            Text { id: chipLabel; anchors.centerIn: parent; text: modelData.label; color: "#f0f4f8"; font.pixelSize: 11; font.bold: true }
-                            DragHandler {
-                                id: chipDrag
-                                target: controllerChip
-                                dragThreshold: 5
+                            height: 38
+                            Item {
+                                id: controllerChip
+                                x: 0
+                                y: 0
+                                width: controllerChipSlot.width
+                                height: controllerChipSlot.height
+                                property string actionId: modelData.action
+                                Rectangle {
+                                    anchors.fill: parent
+                                    radius: 11
+                                    color: actionId === "cross" ? "#2478ef" : actionId === "circle" ? "#df3c43" : actionId === "triangle" ? "#239e61" : actionId === "square" ? "#d7a51e" : "#293340"
+                                    border.color: actionId === "cross" ? "#69aaff" : actionId === "circle" ? "#ff848a" : actionId === "triangle" ? "#69d69b" : actionId === "square" ? "#f2d06e" : "#435163"
+                                }
+                                Drag.active: chipDrag.active
+                                Drag.source: controllerChip
+                                Drag.hotSpot.x: width / 2
+                                Drag.hotSpot.y: height / 2
+                                Drag.supportedActions: Qt.CopyAction
+                                Drag.keys: ["vickey-button"]
+                                Text { id: chipLabel; anchors.centerIn: parent; text: modelData.label; color: "#f0f4f8"; font.pixelSize: 11; font.bold: true }
+                                DragHandler {
+                                    id: chipDrag
+                                    target: controllerChip
+                                    dragThreshold: 5
+                                    onActiveChanged: {
+                                        if (!active) {
+                                            controllerChip.x = 0;
+                                            controllerChip.y = 0;
+                                        }
+                                    }
+                                }
                             }
                         }
                     }
