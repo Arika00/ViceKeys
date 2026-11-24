@@ -53,14 +53,14 @@ jobs:
         if: steps.latest.outputs.is_latest == 'True'
         uses: softprops/action-gh-release@v3
         with:
-          tag_name: v0.1.0-preview.13
-          name: ViceKey 0.1.0 Preview 13 — Windows
+          tag_name: v0.1.0-preview.14
+          name: ViceKey 0.1.0 Preview 14 — Windows
           target_commitish: ${{ github.sha }}
           draft: false
           prerelease: false
           make_latest: true
           overwrite_files: true
-          body: "Fixes drag cancellation and release, adds Ctrl crouch, A/G cover on PlayStation R1, missing L1 binding, and contextual A/E shoulder buttons while the touchpad map is open."
+          body: "Adds color-coded keyboard keycaps in the F1 overlay for every mapped DualSense action, in addition to drag reset, crouch, cover, L1, and contextual map controls."
           generate_release_notes: true
           files: out/ViceKey-Windows.zip
           fail_on_unmatched_files: true
