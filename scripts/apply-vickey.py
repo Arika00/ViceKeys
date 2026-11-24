@@ -1475,7 +1475,7 @@ bool StreamSession::HandleMouseWheelEvent(QWheelEvent *event)
                                                     Chiaki.session.setViceKeyButton(physicalKey.keyCode, drop.source.actionId);
                                                     view.viceKeyMappingRevision++;
                                                     view.viceKeyNotice = physicalKey.keyLabel + " ← " + view.viceKeyActionLabel(drop.source.actionId);
-                                                    drop.accept(Qt.CopyAction);
+                                                    drop.acceptProposedAction();
                                                 }
                                             }
                                         }
@@ -1618,7 +1618,7 @@ bool StreamSession::HandleMouseWheelEvent(QWheelEvent *event)
                         Chiaki.session.setViceKeyMouseInput(mouseDropTarget.inputCode, drop.source.actionId);
                         view.viceKeyMappingRevision++;
                         view.viceKeyNotice = mouseDropTarget.inputName + " ← " + view.viceKeyActionLabel(drop.source.actionId);
-                        drop.accept(Qt.CopyAction);
+                        drop.acceptProposedAction();
                     }
                 }
             }
