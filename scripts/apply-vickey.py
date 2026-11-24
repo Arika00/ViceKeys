@@ -178,6 +178,7 @@ def patch(root: Path) -> None:
         "\t\tdouble vice_key_sensitivity = 1.0;\n"
         "\t\tdouble vice_key_aim_sensitivity = 0.7;\n"
         "\t\tbool vice_key_mouse_aiming = false;\n"
+        "\t\tbool vice_key_mouse_invert_y = false;\n"
         "\t\tbool vice_key_mouse_initialized = false;\n"
         "\t\tbool vice_key_tab_down = false;\n"
         "\t\tbool vice_key_wheel_l2_down = false;\n"
@@ -395,7 +396,6 @@ static ViceKeyRawInputFilter *g_viceKeyRawInputFilter = nullptr;
         "\t\tvice_key_mouse_delta_y = 0;\n"
         "\t\tconst qint64 sampleMs = qMax<qint64>(1, vice_key_mouse_sample_clock.restart());\n"
         "\t\tconst double elapsed = static_cast<double>(sampleMs);\n"
-        "\t\tconst double aim = vice_key_mouse_aiming ? vice_key_aim_sensitivity : 1.0;\n"
         "\t\tif (!vice_key_mouse_capture_enabled) {\n"
         "\t\t\tvice_key_mouse_filtered_x = 0.0; vice_key_mouse_filtered_y = 0.0;\n"
         "\t\t\tvice_key_mouse_last_active_x = 0.0; vice_key_mouse_last_active_y = 0.0;\n"
@@ -423,7 +423,7 @@ static ViceKeyRawInputFilter *g_viceKeyRawInputFilter = nullptr;
         "\t\t\tif (speed > 0.0001) {\n"
         "\t\t\t\tconst double normalized = std::clamp(speed / 3.2, 0.0, 1.0);\n"
         "\t\t\t\tconst double curved = std::pow(normalized, 1.35);\n"
-        "\t\t\t\tconst double maxOutput = vice_key_mouse_aiming ? 0.65 : 1.0;\n"
+        "\t\t\t\tconst double maxOutput = vice_key_mouse_aiming ? std::clamp(vice_key_aim_sensitivity, 0.12, 1.5) : 1.0;\n"
         "\t\t\t\tconst double output = 0.12 + (maxOutput - 0.12) * curved;\n"
         "\t\t\t\tnextX = static_cast<int16_t>(qBound(-32767, qRound(vice_key_mouse_filtered_x / speed * output * 32767.0), 32767));\n"
         "\t\t\t\tnextY = static_cast<int16_t>(qBound(-32767, qRound(vice_key_mouse_filtered_y / speed * output * 32767.0), 32767));\n"
@@ -1458,20 +1458,17 @@ bool StreamSession::HandleMouseWheelEvent(QWheelEvent *event)
                             radius: 7
                             color: actionId === "cross" ? "#2478ef" : actionId === "circle" ? "#df3c43" : actionId === "triangle" ? "#239e61" : actionId === "square" ? "#d7a51e" : "#293340"
                             border.color: actionId === "cross" ? "#69aaff" : actionId === "circle" ? "#ff848a" : actionId === "triangle" ? "#69d69b" : actionId === "square" ? "#f2d06e" : "#435163"
-                            Drag.active: chipDragArea.drag.active
+                            Drag.active: chipDrag.active
                             Drag.source: controllerChip
                             Drag.hotSpot.x: width / 2
                             Drag.hotSpot.y: height / 2
                             Drag.supportedActions: Qt.CopyAction
                             Drag.keys: ["vickey-button"]
                             Text { id: chipLabel; anchors.centerIn: parent; text: modelData.label; color: "#f0f4f8"; font.pixelSize: 11; font.bold: true }
-                            MouseArea {
-                                id: chipDragArea
-                                anchors.fill: parent
-                                acceptedButtons: Qt.LeftButton
-                                drag.target: controllerChip
-                                drag.axis: Drag.XAndYAxis
-                                drag.threshold: 5
+                            DragHandler {
+                                id: chipDrag
+                                target: controllerChip
+                                dragThreshold: 5
                             }
                         }
                     }
