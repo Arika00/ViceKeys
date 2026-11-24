@@ -365,7 +365,7 @@ static ViceKeyRawInputFilter *g_viceKeyRawInputFilter = nullptr;
         "\tkey_map.insert(Qt::Key_4, CHIAKI_CONTROLLER_ANALOG_BUTTON_R2);\n"
         "\tkey_map.insert(Qt::Key_5, CHIAKI_CONTROLLER_BUTTON_L3);\n"
         "\tkey_map.insert(Qt::Key_6, CHIAKI_CONTROLLER_BUTTON_R3);\n"
-        "\tkey_map.insert(Qt::Key_Control, CHIAKI_CONTROLLER_BUTTON_L3);\n"
+        "\tkey_map.insert(Qt::Key_Control, CHIAKI_CONTROLLER_BUTTON_MOON);\n"
         "\tkey_map.insert(vickey_qwerty ? Qt::Key_G : Qt::Key_A, CHIAKI_CONTROLLER_BUTTON_R1);\n"
         "\tkey_map.insert(Qt::Key_Escape, CHIAKI_CONTROLLER_BUTTON_OPTIONS);\n"
         "\tkey_map.insert(Qt::Key_CapsLock, CHIAKI_CONTROLLER_BUTTON_L3 | CHIAKI_CONTROLLER_BUTTON_R3);\n"
@@ -397,7 +397,7 @@ static ViceKeyRawInputFilter *g_viceKeyRawInputFilter = nullptr;
         "\tvice_key_mouse_reset_timer = new QTimer(this);\n"
         "#ifdef Q_OS_WIN\n"
         "\tvice_key_mouse_reset_timer->setTimerType(Qt::PreciseTimer);\n"
-        "\tvice_key_mouse_reset_timer->setInterval(4);\n"
+        "\tvice_key_mouse_reset_timer->setInterval(8);\n"
         "\tconnect(vice_key_mouse_reset_timer, &QTimer::timeout, this, [this] {\n"
         "\t\tconst qint64 dx = vice_key_mouse_delta_x;\n"
         "\t\tconst qint64 dy = vice_key_mouse_delta_y;\n"
@@ -417,23 +417,25 @@ static ViceKeyRawInputFilter *g_viceKeyRawInputFilter = nullptr;
         "\t\tint16_t nextY = 0;\n"
         "\t\tif (dx != 0 || dy != 0) {\n"
         "\t\t\tconst double sampleElapsed = std::max(1.0, vice_key_mouse_elapsed_since_sample_ms);\n"
-        "\t\t\tconst double rawX = static_cast<double>(dx) * vice_key_sensitivity / sampleElapsed;\n"
-        "\t\t\tconst double rawY = static_cast<double>(dy) * vice_key_sensitivity * (vice_key_mouse_invert_y ? -1.0 : 1.0) / sampleElapsed;\n"
+        "\t\t\tconst double activeSensitivity = vice_key_mouse_aiming ? vice_key_aim_sensitivity : vice_key_sensitivity;\n"
+        "\t\t\tconst double rawX = static_cast<double>(dx) * activeSensitivity / sampleElapsed;\n"
+        "\t\t\tconst double rawY = static_cast<double>(dy) * activeSensitivity * (vice_key_mouse_invert_y ? -1.0 : 1.0) / sampleElapsed;\n"
         "\t\t\tconst double previousSpeed = std::hypot(vice_key_mouse_filtered_x, vice_key_mouse_filtered_y);\n"
         "\t\t\tconst double directionDot = rawX * vice_key_mouse_filtered_x + rawY * vice_key_mouse_filtered_y;\n"
         "\t\t\tif (previousSpeed <= 0.0001 || directionDot <= 0.0) {\n"
         "\t\t\t\tvice_key_mouse_filtered_x = rawX; vice_key_mouse_filtered_y = rawY;\n"
         "\t\t\t} else {\n"
-        "\t\t\t\tconst double alpha = 1.0 - std::exp(-sampleElapsed / 3.0);\n"
+        "\t\t\t\tconst double alpha = 1.0 - std::exp(-sampleElapsed / 10.0);\n"
         "\t\t\t\tvice_key_mouse_filtered_x += alpha * (rawX - vice_key_mouse_filtered_x);\n"
         "\t\t\t\tvice_key_mouse_filtered_y += alpha * (rawY - vice_key_mouse_filtered_y);\n"
         "\t\t\t}\n"
         "\t\t\tconst double speed = std::hypot(vice_key_mouse_filtered_x, vice_key_mouse_filtered_y);\n"
         "\t\t\tif (speed > 0.0001) {\n"
         "\t\t\t\tconst double normalized = std::clamp(speed / 3.2, 0.0, 1.0);\n"
-        "\t\t\t\tconst double curved = std::pow(normalized, 1.35);\n"
-        "\t\t\t\tconst double maxOutput = vice_key_mouse_aiming ? std::clamp(vice_key_aim_sensitivity, 0.12, 1.5) : 1.0;\n"
-        "\t\t\t\tconst double output = 0.12 + (maxOutput - 0.12) * curved;\n"
+        "\t\t\t\tconst double accelerated = std::clamp(normalized + 0.20 * normalized * normalized, 0.0, 1.0);\n"
+        "\t\t\t\tconst double curved = std::pow(accelerated, 1.4);\n"
+        "\t\t\t\tconst double antiDeadzone = 0.12;\n"
+        "\t\t\t\tconst double output = antiDeadzone + (1.0 - antiDeadzone) * curved;\n"
         "\t\t\t\tnextX = static_cast<int16_t>(qBound(-32767, qRound(vice_key_mouse_filtered_x / speed * output * 32767.0), 32767));\n"
         "\t\t\t\tnextY = static_cast<int16_t>(qBound(-32767, qRound(vice_key_mouse_filtered_y / speed * output * 32767.0), 32767));\n"
         "\t\t\t}\n"
@@ -441,7 +443,7 @@ static ViceKeyRawInputFilter *g_viceKeyRawInputFilter = nullptr;
         "\t\t\tvice_key_mouse_elapsed_since_sample_ms = 0.0; vice_key_mouse_idle_elapsed_ms = 0.0;\n"
         "\t\t} else {\n"
         "\t\t\tvice_key_mouse_idle_elapsed_ms += elapsed;\n"
-        "\t\t\tconst double releaseProgress = std::clamp((vice_key_mouse_idle_elapsed_ms - 4.0) / 12.0, 0.0, 1.0);\n"
+        "\t\t\tconst double releaseProgress = std::clamp((vice_key_mouse_idle_elapsed_ms - 12.0) / 20.0, 0.0, 1.0);\n"
         "\t\t\tconst double releaseScale = releaseProgress >= 1.0 ? 0.0 : std::cos(releaseProgress * 1.5707963267948966);\n"
         "\t\t\tnextX = static_cast<int16_t>(qRound(vice_key_mouse_last_active_x * releaseScale));\n"
         "\t\t\tnextY = static_cast<int16_t>(qRound(vice_key_mouse_last_active_y * releaseScale));\n"
@@ -828,7 +830,7 @@ static ViceKeyRawInputFilter *g_viceKeyRawInputFilter = nullptr;
         "\telse if (action == \"left_x_down\") button = static_cast<int>(ControllerButtonExt::ANALOG_STICK_LEFT_X_DOWN);\n"
         "\telse if (action == \"cross\") button = CHIAKI_CONTROLLER_BUTTON_CROSS;\n"
         "\telse if (action == \"cover\" || action == \"r1\") button = CHIAKI_CONTROLLER_BUTTON_R1;\n"
-        "\telse if (action == \"crouch\") button = CHIAKI_CONTROLLER_BUTTON_L3;\n"
+        "\telse if (action == \"crouch\") button = CHIAKI_CONTROLLER_BUTTON_MOON;\n"
         "\telse if (action == \"circle\") button = CHIAKI_CONTROLLER_BUTTON_MOON;\n"
         "\telse if (action == \"square\") button = CHIAKI_CONTROLLER_BUTTON_BOX;\n"
         "\telse if (action == \"triangle\") button = CHIAKI_CONTROLLER_BUTTON_PYRAMID;\n"
@@ -856,7 +858,7 @@ static ViceKeyRawInputFilter *g_viceKeyRawInputFilter = nullptr;
     if (action == "left_x_down") return static_cast<int>(ControllerButtonExt::ANALOG_STICK_LEFT_X_DOWN);
     if (action == "cross") return CHIAKI_CONTROLLER_BUTTON_CROSS;
     if (action == "cover" || action == "r1") return CHIAKI_CONTROLLER_BUTTON_R1;
-    if (action == "crouch") return CHIAKI_CONTROLLER_BUTTON_L3;
+    if (action == "crouch") return CHIAKI_CONTROLLER_BUTTON_MOON;
     if (action == "circle") return CHIAKI_CONTROLLER_BUTTON_MOON;
     if (action == "square") return CHIAKI_CONTROLLER_BUTTON_BOX;
     if (action == "triangle") return CHIAKI_CONTROLLER_BUTTON_PYRAMID;
@@ -1011,7 +1013,7 @@ bool StreamSession::HandleMouseWheelEvent(QWheelEvent *event)
         "\tkey_map.insert(Qt::Key_4, CHIAKI_CONTROLLER_ANALOG_BUTTON_R2);\n"
         "\tkey_map.insert(Qt::Key_5, CHIAKI_CONTROLLER_BUTTON_L3);\n"
         "\tkey_map.insert(Qt::Key_6, CHIAKI_CONTROLLER_BUTTON_R3);\n"
-        "\tkey_map.insert(Qt::Key_Control, CHIAKI_CONTROLLER_BUTTON_L3);\n"
+        "\tkey_map.insert(Qt::Key_Control, CHIAKI_CONTROLLER_BUTTON_MOON);\n"
         "\tkey_map.insert(qwerty ? Qt::Key_G : Qt::Key_A, CHIAKI_CONTROLLER_BUTTON_R1);\n"
         "\tkey_map.insert(Qt::Key_Escape, CHIAKI_CONTROLLER_BUTTON_OPTIONS);\n"
         "\tkey_map.insert(Qt::Key_CapsLock, CHIAKI_CONTROLLER_BUTTON_L3 | CHIAKI_CONTROLLER_BUTTON_R3);\n"
@@ -1336,7 +1338,6 @@ bool StreamSession::HandleMouseWheelEvent(QWheelEvent *event)
             dpad_up: "#287b78", dpad_down: "#287b78", dpad_left: "#287b78", dpad_right: "#287b78",
             touchpad: "#247c9e", options: "#596579",
             left_y_up: "#344b62", left_y_down: "#344b62", left_x_down: "#344b62", left_x_up: "#344b62",
-            crouch: "#7651a8"
         };
         return colors[action] || "#222832";
     }
@@ -1349,7 +1350,6 @@ bool StreamSession::HandleMouseWheelEvent(QWheelEvent *event)
             dpad_up: "#69c8c1", dpad_down: "#69c8c1", dpad_left: "#69c8c1", dpad_right: "#69c8c1",
             touchpad: "#64c7e9", options: "#a0adbf",
             left_y_up: "#788da5", left_y_down: "#788da5", left_x_down: "#788da5", left_x_up: "#788da5",
-            crouch: "#b18cdd"
         };
         return colors[action] || "#394451";
     }
@@ -1597,7 +1597,7 @@ bool StreamSession::HandleMouseWheelEvent(QWheelEvent *event)
                                     }
                                 }
                             }
-                            Label { text: view.vt("Carte : A = L1 · E = R1. Ctrl = L3. A = R1 (AZERTY) / G = R1 (QWERTY).", "Map: A = L1 · E = R1. Ctrl = L3. A = R1 (AZERTY) / G = R1 (QWERTY)."); color: "#8293a5"; wrapMode: Text.WordWrap }
+                            Label { text: view.vt("Carte : A = L1 · E = R1. Ctrl = ○ Circle (crouch). A = R1 (AZERTY) / G = R1 (QWERTY).", "Map: A = L1 · E = R1. Ctrl = ○ Circle (crouch). A = R1 (AZERTY) / G = R1 (QWERTY)."); color: "#8293a5"; wrapMode: Text.WordWrap }
                         }
                     }
 
