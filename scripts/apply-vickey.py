@@ -162,6 +162,7 @@ def patch(root: Path) -> None:
         "\t\tbool vice_key_tab_down = false;\n"
         "\t\tbool vice_key_wheel_l2_down = false;\n"
         "\t\tbool vice_key_wheel_r2_down = false;\n"
+        "\t\tuint32_t vice_key_wheel_button_mask = 0;\n"
         "\t\tbool vice_key_mouse_capture_enabled = true;\n"
         "\t\tQMap<int, int> vice_key_pressed_keys;\n"
         "\t\tQMap<int, int> vice_key_pressed_mouse_buttons;\n"
@@ -354,7 +355,7 @@ static ViceKeyRawInputFilter *g_viceKeyRawInputFilter = nullptr;
         "\tvice_key_wheel_reset_timer = new QTimer(this);\n"
         "\tvice_key_wheel_reset_timer->setSingleShot(true);\n"
         "\tconnect(vice_key_wheel_reset_timer, &QTimer::timeout, this, [this] {\n"
-        "\t\tvice_key_wheel_l2_down = false; vice_key_wheel_r2_down = false;\n"
+        "\t\tvice_key_wheel_l2_down = false; vice_key_wheel_r2_down = false; vice_key_wheel_button_mask = 0;\n"
         "\t\tRefreshViceKeyInputState(); SendFeedbackState();\n"
         "\t});\n"
         "\tvice_key_mouse_reset_timer = new QTimer(this);\n"
@@ -854,7 +855,7 @@ void StreamSession::setViceKeyMouseCaptureEnabled(bool enabled)
 
 void StreamSession::RefreshViceKeyInputState()
 {
-    uint32_t buttons = 0;
+    uint32_t buttons = vice_key_wheel_button_mask;
     bool l2 = vice_key_wheel_l2_down;
     bool r2 = vice_key_wheel_r2_down;
     bool leftUp = false, leftDown = false, leftLeft = false, leftRight = false;
@@ -884,8 +885,8 @@ bool StreamSession::HandleMouseWheelEvent(QWheelEvent *event)
     const int action = vice_key_mouse_map.value(input, 0);
     if (action == CHIAKI_CONTROLLER_ANALOG_BUTTON_L2) vice_key_wheel_l2_down = true;
     else if (action == CHIAKI_CONTROLLER_ANALOG_BUTTON_R2) vice_key_wheel_r2_down = true;
-    else return true;
-    vice_key_wheel_reset_timer->start(80);
+    else vice_key_wheel_button_mask |= static_cast<uint32_t>(action);
+    if (vice_key_wheel_reset_timer) vice_key_wheel_reset_timer->start(80);
     RefreshViceKeyInputState();
     SendFeedbackState();
     return true;
@@ -1028,7 +1029,7 @@ bool StreamSession::HandleMouseWheelEvent(QWheelEvent *event)
         "\tvice_key_mouse_aiming = false;\n"
         "\tvice_key_mouse_initialized = false;\n"
         "\tvice_key_tab_down = false;\n"
-        "\tvice_key_wheel_l2_down = false; vice_key_wheel_r2_down = false;\n"
+        "\tvice_key_wheel_l2_down = false; vice_key_wheel_r2_down = false; vice_key_wheel_button_mask = 0;\n"
         "\tvice_key_pressed_keys.clear(); vice_key_pressed_mouse_buttons.clear();\n"
         "\tif (vice_key_wheel_reset_timer) vice_key_wheel_reset_timer->stop();\n"
         "\tif (vice_key_mouse_reset_timer && !vice_key_mouse_reset_timer->isActive()) vice_key_mouse_reset_timer->start();\n"
