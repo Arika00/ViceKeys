@@ -536,7 +536,7 @@ static ViceKeyRawInputFilter *g_viceKeyRawInputFilter = nullptr;
         "\n"
         "\tSendFeedbackState();\n"
         "}\n"
-    )\n"
+    )
     new_keyboard = (
         "void StreamSession::HandleKeyboardEvent(QKeyEvent *event)\n{\n"
         "\tif (!keyboard_controller_enabled || !event || event->isAutoRepeat()) return;\n"
