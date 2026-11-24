@@ -69,9 +69,9 @@ def patch(root: Path) -> None:
         "\nQString Settings::GetViceKeyLayout() const\n{\n\treturn settings.value(\"vickey/layout\", \"AZERTY\").toString();\n}\n"
         "void Settings::SetViceKeyLayout(const QString &layout)\n{\n\tconst QString normalized = layout.compare(\"QWERTY\", Qt::CaseInsensitive) == 0 ? \"QWERTY\" : \"AZERTY\";\n\tsettings.setValue(\"vickey/layout\", normalized);\n}\n"
         "double Settings::GetViceKeySensitivity() const\n{\n\treturn settings.value(\"vickey/sensitivity\", 1.0).toDouble();\n}\n"
-        "void Settings::SetViceKeySensitivity(double value)\n{\n\tsettings.setValue(\"vickey/sensitivity\", qBound(0.01, value, 100.0));\n}\n"
+        "void Settings::SetViceKeySensitivity(double value)\n{\n\tsettings.setValue(\"vickey/sensitivity\", qBound(0.01, value, 20.0));\n}\n"
         "double Settings::GetViceKeyAimSensitivity() const\n{\n\treturn settings.value(\"vickey/aim_sensitivity\", 0.7).toDouble();\n}\n"
-        "void Settings::SetViceKeyAimSensitivity(double value)\n{\n\tsettings.setValue(\"vickey/aim_sensitivity\", qBound(0.01, value, 100.0));\n}\n"
+        "void Settings::SetViceKeyAimSensitivity(double value)\n{\n\tsettings.setValue(\"vickey/aim_sensitivity\", qBound(0.01, value, 20.0));\n}\n"
         "QString Settings::GetViceKeyLanguage() const\n{\n\treturn settings.value(\"vickey/language\", \"FR\").toString();\n}\n"
         "void Settings::SetViceKeyLanguage(const QString &language)\n{\n\tsettings.setValue(\"vickey/language\", language.compare(\"EN\", Qt::CaseInsensitive) == 0 ? \"EN\" : \"FR\");\n}\n",
         "settings implementation")
@@ -154,7 +154,7 @@ def patch(root: Path) -> None:
         "    const double sensitivity = root.value(\"sensitivity\").toDouble();\n"
         "    const double aimSensitivity = root.value(\"aimSensitivity\").toDouble();\n"
         "    const int overlayKey = root.value(\"overlayKey\").toInt();\n"
-        "    if (sensitivity < 0.01 || sensitivity > 100.0 || aimSensitivity < 0.01 || aimSensitivity > 100.0 || overlayKey <= 0) return false;\n"
+        "    if (sensitivity < 0.01 || sensitivity > 20.0 || aimSensitivity < 0.01 || aimSensitivity > 20.0 || overlayKey <= 0) return false;\n"
         "    QMap<int, int> keysToImport; const QJsonObject keys = root.value(\"keymap\").toObject();\n"
         "    for (auto it = keys.begin(); it != keys.end(); ++it) { bool ok = false; int key = it.key().toInt(&ok); if (!ok || key <= 0 || !it.value().isDouble()) return false; int value = it.value().toInt(-1); if (value < 0 || value > 0x7fffffff) return false; keysToImport.insert(key, value); }\n"
         "    QMap<int, int> mouseToImport; const QJsonObject mouse = root.value(\"mousemap\").toObject();\n"
@@ -694,14 +694,14 @@ static ViceKeyRawInputFilter *g_viceKeyRawInputFilter = nullptr;
         "                                Label { text: qsTr(\"Camera sensitivity: \" + Number(Chiaki.settings.viceKeySensitivity).toFixed(2)) }\n"
         "                                Slider {\n"
         "                                    Layout.fillWidth: true\n"
-        "                                    from: 0.01; to: 100.00; stepSize: 0.05\n"
+        "                                    from: 0.01; to: 20.00; stepSize: 0.05\n"
         "                                    value: Chiaki.settings.viceKeySensitivity\n"
         "                                    onMoved: { Chiaki.settings.viceKeySensitivity = value; if (Chiaki.session) Chiaki.session.setViceKeySensitivity(value); }\n"
         "                                }\n"
         "                                Label { text: qsTr(\"Aim sensitivity: \" + Number(Chiaki.settings.viceKeyAimSensitivity).toFixed(2)) }\n"
         "                                Slider {\n"
         "                                    Layout.fillWidth: true\n"
-        "                                    from: 0.01; to: 100.00; stepSize: 0.05\n"
+        "                                    from: 0.01; to: 20.00; stepSize: 0.05\n"
         "                                    value: Chiaki.settings.viceKeyAimSensitivity\n"
         "                                    onMoved: { Chiaki.settings.viceKeyAimSensitivity = value; if (Chiaki.session) Chiaki.session.setViceKeyAimSensitivity(value); }\n"
         "                                }\n"
@@ -728,7 +728,7 @@ static ViceKeyRawInputFilter *g_viceKeyRawInputFilter = nullptr;
         "\t\tvoid ClearViceKeyMouseMappings();\n",
         "persistent key map API")
     insert_after(settings_cpp,
-        "void Settings::SetViceKeyAimSensitivity(double value)\n{\n\tsettings.setValue(\"vickey/aim_sensitivity\", qBound(0.01, value, 100.0));\n}\n",
+        "void Settings::SetViceKeyAimSensitivity(double value)\n{\n\tsettings.setValue(\"vickey/aim_sensitivity\", qBound(0.01, value, 20.0));\n}\n",
         "\nQMap<int, int> Settings::GetViceKeyMappings() const\n{\n"
         "\tQMap<int, int> result;\n"
         "\tconst QString prefix = QStringLiteral(\"vickey/profiles/%1/keymap/\").arg(GetViceKeyLayout().toLower());\n"
@@ -913,14 +913,7 @@ void StreamSession::setViceKeyButton(int key, const QString &action)
 
 QString StreamSession::viceKeyActionForKey(int key) const
 {
-    const int value = key_map.value(static_cast<Qt::Key>(key), 0);
-    if (key == Qt::Key_Control && value == CHIAKI_CONTROLLER_BUTTON_L3)
-        return QStringLiteral("crouch");
-    const bool qwerty = vice_key_settings && vice_key_settings->GetViceKeyLayout().compare("QWERTY", Qt::CaseInsensitive) == 0;
-    const int coverKey = qwerty ? Qt::Key_G : Qt::Key_A;
-    if (key == coverKey && value == CHIAKI_CONTROLLER_BUTTON_R1)
-        return QStringLiteral("cover");
-    return ViceKeyActionName(value);
+    return ViceKeyActionName(key_map.value(static_cast<Qt::Key>(key), 0));
 }
 
 void StreamSession::setViceKeyMouseInput(int input, const QString &action)
@@ -1038,12 +1031,12 @@ bool StreamSession::HandleMouseWheelEvent(QWheelEvent *event)
         "\t}\n"
         "}\n\n"
         "void StreamSession::setViceKeySensitivity(double value)\n{\n"
-        "\tvice_key_sensitivity = qBound(0.01, value, 100.0);\n"
+        "\tvice_key_sensitivity = qBound(0.01, value, 20.0);\n"
         "\tif (vice_key_settings) vice_key_settings->SetViceKeySensitivity(vice_key_sensitivity);\n"
         "\tif (vice_key_mouse_reset_timer && !vice_key_mouse_reset_timer->isActive()) vice_key_mouse_reset_timer->start();\n"
         "}\n\n"
         "void StreamSession::setViceKeyAimSensitivity(double value)\n{\n"
-        "\tvice_key_aim_sensitivity = qBound(0.01, value, 100.0);\n"
+        "\tvice_key_aim_sensitivity = qBound(0.01, value, 20.0);\n"
         "\tif (vice_key_settings) vice_key_settings->SetViceKeyAimSensitivity(vice_key_aim_sensitivity);\n"
         "\tif (vice_key_mouse_reset_timer && !vice_key_mouse_reset_timer->isActive()) vice_key_mouse_reset_timer->start();\n"
         "}\n\n"
@@ -1320,7 +1313,7 @@ bool StreamSession::HandleMouseWheelEvent(QWheelEvent *event)
     function viceKeyBuildKeyboardRows(layout) {
         var q = layout === "QWERTY";
         return [
-            [viceKeyKey("Esc", Qt.Key_Escape, 50), viceKeyKey("1", Qt.Key_1), viceKeyKey("2", Qt.Key_2), viceKeyKey("3", Qt.Key_3), viceKeyKey("4", Qt.Key_4), viceKeyKey("5", Qt.Key_5), viceKeyKey("6", Qt.Key_6), viceKeyKey("7", Qt.Key_7), viceKeyKey("8", Qt.Key_8), viceKeyKey("9", Qt.Key_9), viceKeyKey("0", Qt.Key_0), viceKeyKey("-", Qt.Key_Minus), viceKeyKey("=", Qt.Key_Equal), viceKeyKey("⌫", Qt.Key_Backspace, 66)],
+            [viceKeyKey("Esc", Qt.Key_Escape, 50), viceKeyKey("1", Qt.Key_1), viceKeyKey("2", Qt.Key_2), viceKeyKey("3", Qt.Key_3), viceKeyKey("4", Qt.Key_4), viceKeyKey("5", Qt.Key_5), viceKeyKey("6", Qt.Key_6), viceKeyKey("7", Qt.Key_7), viceKeyKey("8", Qt.Key_8), viceKeyKey("9", Qt.Key_9), viceKeyKey("0", Qt.Key_0), viceKeyKey("-", Qt.Key_Minus), viceKeyKey("=", Qt.Key_Equal)],
             q ? [viceKeyKey("Tab", Qt.Key_Tab, 56), viceKeyKey("Q", Qt.Key_Q), viceKeyKey("W", Qt.Key_W), viceKeyKey("E", Qt.Key_E), viceKeyKey("R", Qt.Key_R), viceKeyKey("T", Qt.Key_T), viceKeyKey("Y", Qt.Key_Y), viceKeyKey("U", Qt.Key_U), viceKeyKey("I", Qt.Key_I), viceKeyKey("O", Qt.Key_O), viceKeyKey("P", Qt.Key_P), viceKeyKey("[", Qt.Key_BracketLeft), viceKeyKey("]", Qt.Key_BracketRight)] :
                [viceKeyKey("Tab", Qt.Key_Tab, 56), viceKeyKey("A", Qt.Key_A), viceKeyKey("Z", Qt.Key_Z), viceKeyKey("E", Qt.Key_E), viceKeyKey("R", Qt.Key_R), viceKeyKey("T", Qt.Key_T), viceKeyKey("Y", Qt.Key_Y), viceKeyKey("U", Qt.Key_U), viceKeyKey("I", Qt.Key_I), viceKeyKey("O", Qt.Key_O), viceKeyKey("P", Qt.Key_P), viceKeyKey("^", Qt.Key_Dead_Circumflex), viceKeyKey("$", Qt.Key_Dollar)],
             q ? [viceKeyKey("Caps", Qt.Key_CapsLock, 66), viceKeyKey("A", Qt.Key_A), viceKeyKey("S", Qt.Key_S), viceKeyKey("D", Qt.Key_D), viceKeyKey("F", Qt.Key_F), viceKeyKey("G", Qt.Key_G), viceKeyKey("H", Qt.Key_H), viceKeyKey("J", Qt.Key_J), viceKeyKey("K", Qt.Key_K), viceKeyKey("L", Qt.Key_L), viceKeyKey(";", Qt.Key_Semicolon), viceKeyKey("'", Qt.Key_Apostrophe), viceKeyKey("↵", Qt.Key_Return, 62)] :
@@ -1331,7 +1324,7 @@ bool StreamSession::HandleMouseWheelEvent(QWheelEvent *event)
         ];
     }
     function viceKeyActionLabel(action) {
-        var labels = { none: "", cover: view.vt("Se mettre à couvert", "Take cover"), crouch: view.vt("S’accroupir", "Crouch"), cross: view.vt("✕ Croix", "✕ Cross"), circle: view.vt("○ Rond", "○ Circle"), square: view.vt("□ Carré", "□ Square"), triangle: view.vt("△ Triangle", "△ Triangle"), l1: "L1", r1: "R1", l2: "L2", r2: "R2", l3: "L3", r3: "R3", focus: "L3 + R3", dpad_up: "D-Pad ↑", dpad_down: "D-Pad ↓", dpad_left: "D-Pad ←", dpad_right: "D-Pad →", touchpad: "Touchpad", options: "Options", left_y_up: "Stick G ↑", left_y_down: "Stick G ↓", left_x_down: "Stick G ←", left_x_up: "Stick G →" };
+        var labels = { none: "", cross: view.vt("✕ Croix", "✕ Cross"), circle: view.vt("○ Rond", "○ Circle"), square: view.vt("□ Carré", "□ Square"), triangle: view.vt("△ Triangle", "△ Triangle"), l1: "L1", r1: "R1", l2: "L2", r2: "R2", l3: "L3", r3: "R3", focus: "L3 + R3", dpad_up: "D-Pad ↑", dpad_down: "D-Pad ↓", dpad_left: "D-Pad ←", dpad_right: "D-Pad →", touchpad: "Touchpad", options: "Options", left_y_up: "Stick G ↑", left_y_down: "Stick G ↓", left_x_down: "Stick G ←", left_x_up: "Stick G →" };
         return labels[action] || "—";
     }
     function viceKeyActionColor(action) {
@@ -1604,7 +1597,7 @@ bool StreamSession::HandleMouseWheelEvent(QWheelEvent *event)
                                     }
                                 }
                             }
-                            Label { text: view.vt("Carte : A = L1 · E = R1. Ctrl = Accroupir. A = Couverture (AZERTY).", "Map: A = L1 · E = R1. Ctrl = Crouch. G = Cover (QWERTY)."); color: "#8293a5"; wrapMode: Text.WordWrap }
+                            Label { text: view.vt("Carte : A = L1 · E = R1. Ctrl = L3. A = R1 (AZERTY) / G = R1 (QWERTY).", "Map: A = L1 · E = R1. Ctrl = L3. A = R1 (AZERTY) / G = R1 (QWERTY)."); color: "#8293a5"; wrapMode: Text.WordWrap }
                         }
                     }
 
@@ -1770,13 +1763,13 @@ bool StreamSession::HandleMouseWheelEvent(QWheelEvent *event)
     RowLayout {
         Layout.fillWidth: true
         Label { text: view.vt("Caméra", "Camera"); color: "#bdc8d5"; Layout.preferredWidth: 105 }
-        Slider { id: viceKeyCameraSensitivity; Layout.fillWidth: true; from: 0.01; to: 5.0; stepSize: 0.05; value: Chiaki.settings.viceKeySensitivity; onMoved: { Chiaki.settings.viceKeySensitivity = value; if (Chiaki.session) Chiaki.session.setViceKeySensitivity(value); } }
+        Slider { id: viceKeyCameraSensitivity; Layout.fillWidth: true; from: 0.01; to: 20.0; stepSize: 0.05; value: Chiaki.settings.viceKeySensitivity; onMoved: { Chiaki.settings.viceKeySensitivity = value; if (Chiaki.session) Chiaki.session.setViceKeySensitivity(value); } }
         Label { text: Number(viceKeyCameraSensitivity.value).toFixed(2); color: "#f3f6fa"; Layout.preferredWidth: 46 }
     }
     RowLayout {
         Layout.fillWidth: true
         Label { text: "Aim"; color: "#bdc8d5"; Layout.preferredWidth: 105 }
-        Slider { id: viceKeyAimSensitivity; Layout.fillWidth: true; from: 0.01; to: 5.0; stepSize: 0.05; value: Chiaki.settings.viceKeyAimSensitivity; onMoved: { Chiaki.settings.viceKeyAimSensitivity = value; if (Chiaki.session) Chiaki.session.setViceKeyAimSensitivity(value); } }
+        Slider { id: viceKeyAimSensitivity; Layout.fillWidth: true; from: 0.01; to: 20.0; stepSize: 0.05; value: Chiaki.settings.viceKeyAimSensitivity; onMoved: { Chiaki.settings.viceKeyAimSensitivity = value; if (Chiaki.session) Chiaki.session.setViceKeyAimSensitivity(value); } }
         Label { text: Number(viceKeyAimSensitivity.value).toFixed(2); color: "#f3f6fa"; Layout.preferredWidth: 46 }
     }
 }"""
